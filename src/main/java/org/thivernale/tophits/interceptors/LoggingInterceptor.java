@@ -2,11 +2,13 @@ package org.thivernale.tophits.interceptors;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.logging.Logger;
 
@@ -14,6 +16,8 @@ import java.util.logging.Logger;
 @Component
 public class LoggingInterceptor implements HandlerInterceptor {
     private static final Logger log = Logger.getLogger(LoggingInterceptor.class.getName());
+
+    private HttpSession session;
 
     @Override
     public void afterCompletion(
@@ -31,12 +35,26 @@ public class LoggingInterceptor implements HandlerInterceptor {
         @NonNull HttpServletRequest request,
         @NonNull HttpServletResponse response, @NonNull Object handler, ModelAndView modelAndView) throws Exception {
         log.info("[postHandle][" + request + "]");
+
+        long executionTime = System.currentTimeMillis() - (Long) request.getAttribute("executionTime");
+        log.info("Execution time: " + executionTime + " ms");
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request,
                              @NonNull HttpServletResponse response, @NonNull Object handler) throws Exception {
         log.info("[preHandle][" + request + "][" + request.getMethod() + "]" + request.getRequestURI() + getParameters(request));
+
+        session = request.getSession();
+        long lastAccessedTime = session.getLastAccessedTime();
+        log.info("Session ID: " + request.getSession()
+            .getId());
+        log.info("Creation time: " + session.getCreationTime() + " " + new Date(session.getCreationTime()));
+        log.info("Last accessed: " + lastAccessedTime + " " + new Date(lastAccessedTime));
+        log.info("Idle: " + (System.currentTimeMillis() - lastAccessedTime) / 1000 + " seconds");
+
+        request.setAttribute("executionTime", System.currentTimeMillis());
+
         return true;
     }
 
