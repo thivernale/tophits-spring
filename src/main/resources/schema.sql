@@ -5,6 +5,8 @@
 CREATE SCHEMA IF NOT EXISTS spring;
 -- Switch to the created schema
 SET search_path TO spring;
+-- SET schema 'spring';
+-- SHOW search_path;
 
 CREATE TABLE IF NOT EXISTS tracks
 (
