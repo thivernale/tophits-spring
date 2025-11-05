@@ -3,6 +3,8 @@ package org.thivernale.tophits.interceptors;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSessionEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -17,7 +19,12 @@ import java.util.logging.Logger;
 public class LoggingInterceptor implements HandlerInterceptor {
     private static final Logger log = Logger.getLogger(LoggingInterceptor.class.getName());
 
+    private final ApplicationEventPublisher publisher;
     private HttpSession session;
+
+    public LoggingInterceptor(ApplicationEventPublisher publisher) {
+        this.publisher = publisher;
+    }
 
     @Override
     public void afterCompletion(
@@ -54,6 +61,8 @@ public class LoggingInterceptor implements HandlerInterceptor {
         log.info("Idle: " + (System.currentTimeMillis() - lastAccessedTime) / 1000 + " seconds");
 
         request.setAttribute("executionTime", System.currentTimeMillis());
+
+        publisher.publishEvent(new HttpSessionEvent(session));
 
         return true;
     }
