@@ -2,6 +2,8 @@ package org.thivernale.tophits.services;
 
 import jakarta.servlet.http.HttpSessionEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.web.context.WebServerInitializedEvent;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -18,7 +20,8 @@ public class AppListeners {
 
     @EventListener
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        log.warn("Spring Application Started");
+        log.info("Spring Application Started {}", event.getApplicationContext()
+            .getId());
     }
 
     @Async
@@ -31,5 +34,23 @@ public class AppListeners {
             .getId());
     }
 
+    @EventListener
+    public void webServerInitialized(WebServerInitializedEvent event) {
+        log.info("WebServer started on port {}", event.getWebServer()
+            .getPort());
+    }
 
+    @EventListener
+    public void ready(ApplicationReadyEvent event) {
+        log.info("Application ready in {} seconds", event.getTimeTaken()
+            .toMillis() / 1000.0);
+    }
+
+    @EventListener
+    public void onCustomApplicationEvent(CustomAppEvent event) {
+        log.info("Custom application event {}", event);
+    }
+
+    public record CustomAppEvent(Object source) {
+    }
 }

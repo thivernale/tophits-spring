@@ -1,6 +1,9 @@
 package org.thivernale.tophits.config;
 
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -9,6 +12,7 @@ import org.thivernale.tophits.filters.RateLimiter;
 import org.thivernale.tophits.filters.RateLimitingFilter;
 import org.thivernale.tophits.interceptors.LoggingInterceptor;
 import org.thivernale.tophits.interceptors.RateLimitingInterceptor;
+import org.thivernale.tophits.services.AppListeners;
 
 @Configuration
 public class AppConfig implements WebMvcConfigurer {
@@ -39,5 +43,10 @@ public class AppConfig implements WebMvcConfigurer {
         filterRegistrationBean.addUrlPatterns("/api/*");
         filterRegistrationBean.setOrder(0);
         return filterRegistrationBean;
+    }
+
+    @Bean
+    ApplicationListener<ApplicationReadyEvent> publisher(ApplicationEventPublisher publisher) {
+        return event -> publisher.publishEvent(new AppListeners.CustomAppEvent(event.getSource()));
     }
 }
