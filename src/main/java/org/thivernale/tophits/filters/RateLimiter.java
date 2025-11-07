@@ -2,6 +2,7 @@ package org.thivernale.tophits.filters;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -9,13 +10,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Component
+@Primary
 public class RateLimiter {
     private final Map<String, UserRequests> userRequests = new ConcurrentHashMap<>();
     private final long duration = TimeUnit.MINUTES.toMillis(1); // duration in milliseconds
     @Value("${ratelimiter.limit:3}")
-    private int LIMIT; // max requests
+    private int limit; // max requests
 
-    public boolean isAllowed(String userId) {
+    protected boolean isAllowed(String userId) {
         long currentTime = System.currentTimeMillis();
 
         userRequests.compute(userId, (key, value) -> {
@@ -23,14 +25,14 @@ public class RateLimiter {
                 // Reset if duration expired
                 return new UserRequests(1, currentTime);
             }
-            if (value.count <= LIMIT) {
+            if (value.count <= limit) {
                 value.count++;
                 return value;
             }
             return value; // limit reached
         });
 
-        return userRequests.get(userId) != null && userRequests.get(userId).count <= LIMIT;
+        return userRequests.get(userId) != null && userRequests.get(userId).count <= limit;
     }
 
     public boolean isRateLimitExceeded(HttpServletRequest request) {
@@ -38,7 +40,7 @@ public class RateLimiter {
         return !isAllowed(userId);
     }
 
-    private static class UserRequests {
+    protected static class UserRequests {
         int count;
         long timestamp;
 

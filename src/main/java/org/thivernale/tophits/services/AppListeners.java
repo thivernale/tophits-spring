@@ -29,7 +29,7 @@ public class AppListeners {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onApplicationEvent(HttpSessionEvent event) throws InterruptedException {
         log.info("Sleeping ...");
-        Thread.sleep(Duration.ofSeconds(3));
+        Thread.sleep(Duration.ofSeconds(0));
         log.warn("Session ID after sleeping {}", event.getSession()
             .getId());
     }

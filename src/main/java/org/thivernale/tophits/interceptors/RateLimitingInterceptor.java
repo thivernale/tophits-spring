@@ -15,7 +15,7 @@ import org.thivernale.tophits.filters.RateLimiter;
 public class RateLimitingInterceptor implements HandlerInterceptor {
     private final RateLimiter rateLimiter;
 
-    public RateLimitingInterceptor(RateLimiter rateLimiter) {
+    public RateLimitingInterceptor(/*@Qualifier(value = "redisRateLimiter")*/ RateLimiter rateLimiter) {
         this.rateLimiter = rateLimiter;
     }
 
