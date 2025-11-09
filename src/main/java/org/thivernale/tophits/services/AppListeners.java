@@ -20,7 +20,7 @@ public class AppListeners {
 
     @EventListener
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        log.info("Spring Application Started {}", event.getApplicationContext()
+        log.debug("Spring Application Started {}", event.getApplicationContext()
             .getId());
     }
 
@@ -28,27 +28,27 @@ public class AppListeners {
     @TransactionalEventListener(fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onApplicationEvent(HttpSessionEvent event) throws InterruptedException {
-        log.info("Sleeping ...");
+        log.debug("Sleeping ...");
         Thread.sleep(Duration.ofSeconds(0));
-        log.warn("Session ID after sleeping {}", event.getSession()
+        log.debug("Session ID after sleeping {}", event.getSession()
             .getId());
     }
 
     @EventListener
     public void webServerInitialized(WebServerInitializedEvent event) {
-        log.info("WebServer started on port {}", event.getWebServer()
+        log.debug("WebServer started on port {}", event.getWebServer()
             .getPort());
     }
 
     @EventListener
     public void ready(ApplicationReadyEvent event) {
-        log.info("Application ready in {} seconds", event.getTimeTaken()
+        log.debug("Application ready in {} seconds", event.getTimeTaken()
             .toMillis() / 1000.0);
     }
 
     @EventListener
     public void onCustomApplicationEvent(CustomAppEvent event) {
-        log.info("Custom application event {}", event);
+        log.debug("Custom application event {}", event);
     }
 
     public record CustomAppEvent(Object source) {

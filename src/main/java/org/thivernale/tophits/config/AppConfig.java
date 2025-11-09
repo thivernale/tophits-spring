@@ -40,7 +40,7 @@ public class AppConfig implements WebMvcConfigurer {
     FilterRegistrationBean<RateLimitingFilter> rateLimitingFilter() {
         FilterRegistrationBean<RateLimitingFilter> filterRegistrationBean = new FilterRegistrationBean<>();
         filterRegistrationBean.setFilter(new RateLimitingFilter(rateLimiter));
-        filterRegistrationBean.addUrlPatterns("/api/*");
+        filterRegistrationBean.addUrlPatterns("/api/v2/*");
         filterRegistrationBean.setOrder(0);
         return filterRegistrationBean;
     }

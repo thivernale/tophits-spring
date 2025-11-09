@@ -1,6 +1,7 @@
 package org.thivernale.tophits.redis;
 
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,6 +23,7 @@ import java.util.Map;
 
 @Configuration
 @EnableCaching
+@Slf4j
 public class RedisDataPractice {
     @Bean
     @ConditionalOnProperty("app.redis.data.enabled")
@@ -43,7 +45,7 @@ public class RedisDataPractice {
                     )))
                 .map(GeoResult::getContent)
                 .map(GeoLocation::getName)
-                .doOnNext(System.out::println)
+                .doOnNext(log::debug)
                 .subscribe();
         };
     }
@@ -56,9 +58,9 @@ public class RedisDataPractice {
             var listName = "assorted-item-list";
             var push = listTemplate.leftPushAll(listName, "value1", "value2", "value3");
             push.thenMany(listTemplate.leftPop(listName))
-                .doOnNext(System.out::println)
+                .doOnNext(log::debug)
                 .thenMany(listTemplate.leftPop(listName))
-                .doOnNext(System.out::println)
+                .doOnNext(log::debug)
                 .subscribe();
         };
     }
@@ -77,7 +79,7 @@ public class RedisDataPractice {
         stopWatch.start();
         Response response = service.performExpensiveCalculation(input);
         stopWatch.stop();
-        System.out.printf("Response %s after %f seconds %n%n", response, stopWatch.lastTaskInfo()
+        log.debug("Response {} after {} seconds", response, stopWatch.lastTaskInfo()
             .getTimeMillis() / 1000.0);
         return response;
     }
