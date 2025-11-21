@@ -11,10 +11,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -24,16 +21,15 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 @Slf4j
 public class DataLoadingService {
+    private static final String DATA_DIRECTORY = "data/";
     private final TrackRepository trackRepository;
 
-    private final String dataDirectory = "data/";
-
-    public List<String> getAvailableCsvFiles() throws IOException {
-        Path path = Path.of(dataDirectory);
+    public List<String> getAvailableCsvFiles() {
+        Path path = Path.of(DATA_DIRECTORY);
 
         if (!Files.exists(path) || !Files.isDirectory(path)) {
-            log.warn("Data directory does not exist or is not a directory: {}", dataDirectory);
-            return new ArrayList<>();
+            log.warn("Data directory does not exist or is not a directory: {}", DATA_DIRECTORY);
+            return Collections.emptyList();
         }
 
         try (Stream<Path> walk = Files.walk(path)) {
@@ -43,11 +39,14 @@ public class DataLoadingService {
                 .map(Path::toString)
                 .filter(string -> string.endsWith(".csv"))
                 .toList();
+        } catch (IOException e) {
+            log.warn("Error reading data directory: {}", DATA_DIRECTORY, e);
+            return Collections.emptyList();
         }
     }
 
     public LoadResult loadCsvFile(String fileName) {
-        Path path = Path.of(dataDirectory)
+        Path path = Path.of(DATA_DIRECTORY)
             .resolve(fileName);
 
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
@@ -174,6 +173,18 @@ public class DataLoadingService {
             });
 
         return track;
+    }
+
+    public Track testDatabaseInsertion() {
+        Track track = new Track();
+        track.setTrackName("Test Track");
+        track.setArtistName("Test Artist");
+        track.setReleasedYear(2024);
+        track.setReleasedMonth(1);
+        track.setReleasedDay(1);
+        track.setStreams(1_000_000L);
+
+        return trackRepository.save(track);
     }
 
     public record LoadResult(int successCount, int errorCount, List<String> errors) {
