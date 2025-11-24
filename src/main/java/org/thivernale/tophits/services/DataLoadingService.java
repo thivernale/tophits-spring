@@ -69,7 +69,7 @@ public class DataLoadingService {
 
             reader
                 .lines()
-                .filter(line -> line.startsWith("BESO"))
+                //.filter(line -> line.startsWith("BESO"))
                 .forEach(s -> {
                     index.getAndIncrement();
                     try {
@@ -80,7 +80,7 @@ public class DataLoadingService {
                             return;
                         }
                         Track track = createTrackFromCsvData(headers, values);
-                        Track savedTrack = trackRepository.save(track);
+                        Track savedTrack = track;//TODO remove trackRepository.save(track);
                         log.info("Saved track with ID: {}", savedTrack.getId());
                     } catch (Exception e) {
                         log.error("Error processing line {}: {}", index, e.getMessage());
@@ -88,7 +88,7 @@ public class DataLoadingService {
                     }
                 });
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Error processing file: {}", fileName, e);
             throw new RuntimeException("Failed to load CSV file: " + e.getMessage(), e);
         }
@@ -161,10 +161,10 @@ public class DataLoadingService {
                         field.set(track, fieldValue);
                     } else if (field.getType()
                         .equals(Integer.class)) {
-                        field.set(track, Integer.parseInt(fieldValue));
+                        field.set(track, Integer.parseInt(fieldValue.replaceAll("[^0-9]", "")));
                     } else if (field.getType()
                         .equals(Long.class)) {
-                        field.set(track, Long.parseLong(fieldValue));
+                        field.set(track, Long.parseLong(fieldValue.replaceAll("[^0-9]", "")));
                     }
                     field.setAccessible(false);
                 } catch (IllegalAccessException e) {
