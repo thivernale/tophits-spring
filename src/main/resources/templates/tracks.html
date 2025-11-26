@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Tracks - Top Hits</title>
+    <style>
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f9fa;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #ffffff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .header {
+        background-color: #343a40;
+        color: white;
+        padding: 10px 0;
+        position: relative;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      .total-count {
+        margin-top: 5px;
+        font-size: 16px;
+      }
+
+      .load-data-btn {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        padding: 8px 16px;
+        font-size: 14px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .load-data-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .search-container {
+        margin-bottom: 20px;
+      }
+
+      .search-controls {
+        display: flex;
+        gap: 10px;
+      }
+
+      .search-controls input,
+      .search-controls select {
+        flex: 1;
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      .search-btn,
+      .clear-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      .search-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+      }
+
+      .clear-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+      }
+
+      .search-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .clear-btn:hover {
+        background-color: #5a6268;
+      }
+
+      .tracks-container {
+        margin-top: 20px;
+      }
+
+      .track-list-header {
+        display: flex;
+        font-weight: bold;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 10px;
+      }
+
+      .track-list-header span {
+        flex: 1;
+        text-align: left;
+      }
+
+      .track-title-header {
+        flex: 3;
+      }
+
+      .track-artist-header {
+        flex: 2;
+      }
+
+      .track-number-header, .track-duration-header {
+        flex: 1;
+      }
+
+
+    </style>
+</head>
+<body>
+<!-- main container with header, search bar, and track list -->
+<div class="container">
+    <header class="header">
+        <button class="load-data-btn">Load data</button>
+        <h1>Music Tracks Database</h1>
+        <div class="total-count">Total Tracks: <span th:text="${totalCount}">0</span></div>
+    </header>
+    <section class="search-container">
+        <div class="search-controls">
+            <input id="searchInput" placeholder="Search for tracks or artists..." type="text"/>
+            <select aria-label="Search type" id="searchType">
+                <option value="track">Track name</option>
+                <option value="artist">Artist name</option>
+            </select>
+            <button class="search-btn" id="searchBtn" type="button">Search</button>
+            <button class="clear-btn" id="clearBtn" type="button">Clear</button>
+        </div>
+    </section>
+    <section class="tracks-container">
+        <div class="track-list-header">
+            <span class="track-title-header">Track Name</span>
+            <span class="track-artist-header">Artist</span>
+            <span class="track-number-header">Year</span>
+            <span class="track-duration-header">Streams</span>
+            <span class="track-duration-header">Spotify Lists</span>
+            <span class="track-duration-header">Bass Line</span>
+        </div>
+    </section>
+</div>
+
+</body>
+</html>

@@ -25,11 +25,24 @@ public class TrackService {
             .orElse(null);
     }
 
+    public long getTotalTrackCount() {
+        return trackRepository.count();
+    }
+
     public List<Track> findAll() {
         return new ArrayList<>((Collection) trackRepository.findAll());
     }
 
     public Page<Track> searchTracks(String query, String searchType, int page, int size, String sortField, String sortOrder) {
+        // initialize input parameters with default values if necessary
+        if (page < 0) page = 0;
+        if (size <= 0) size = 20;
+        if (sortField == null || sortField.isEmpty()) sortField = "id";
+        if (sortOrder == null || (!sortOrder.equalsIgnoreCase("asc") && !sortOrder.equalsIgnoreCase("desc")))
+            sortOrder = "asc";
+        if (searchType == null || (!searchType.equalsIgnoreCase("artist") && !searchType.equalsIgnoreCase("track")))
+            searchType = "track";
+
         log.info("Searching tracks with query: {}, searchType: {}, page: {}, size: {}, sortField: {}, sortOrder: {}",
             query, searchType, page, size, sortField, sortOrder);
 
