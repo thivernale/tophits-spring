@@ -10,10 +10,6 @@ import org.springframework.stereotype.Service;
 import org.thivernale.tophits.models.Track;
 import org.thivernale.tophits.repositories.TrackRepository;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -29,8 +25,15 @@ public class TrackService {
         return trackRepository.count();
     }
 
-    public List<Track> findAll() {
-        return new ArrayList<>((Collection) trackRepository.findAll());
+    public Page<Track> listTracks(int page, int size, String sortField, String sortOrder) {
+        Sort sort = sortOrder.equalsIgnoreCase("desc") ?
+            Sort.by(sortField)
+                .descending() :
+            Sort.by(sortField)
+                .ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        return trackRepository.findAll(pageable);
     }
 
     public Page<Track> searchTracks(String query, String searchType, int page, int size, String sortField, String sortOrder) {
