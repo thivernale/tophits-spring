@@ -119,18 +119,25 @@
         text-align: left;
       }
 
-      .track-title-header {
-        flex: 3;
+      .track-item {
+        display: flex;
+        padding: 10px 0;
+        border-bottom: 1px solid #dee2e6;
       }
 
-      .track-artist-header {
-        flex: 2;
+      .loading, .no-tracks, .error-message {
+        text-align: center;
+        padding: 20px;
+        display: none;
       }
 
-      .track-number-header, .track-duration-header {
-        flex: 1;
+      .loading, .no-tracks {
+        color: #6c757d;
       }
 
+      .error-message {
+        color: red;
+      }
 
     </style>
 </head>
@@ -142,6 +149,7 @@
         <h1>Music Tracks Database</h1>
         <div class="total-count">Total Tracks: <span th:text="${totalCount}">0</span></div>
     </header>
+
     <section class="search-container">
         <div class="search-controls">
             <input id="searchInput" placeholder="Search for tracks or artists..." type="text"/>
@@ -153,17 +161,183 @@
             <button class="clear-btn" id="clearBtn" type="button">Clear</button>
         </div>
     </section>
-    <section class="tracks-container">
+
+    <section class="tracks-container" id="tracksContainer">
         <div class="track-list-header">
-            <span class="track-title-header">Track Name</span>
-            <span class="track-artist-header">Artist</span>
-            <span class="track-number-header">Year</span>
-            <span class="track-duration-header">Streams</span>
-            <span class="track-duration-header">Spotify Lists</span>
-            <span class="track-duration-header">Bass Line</span>
+            <span>Track Name</span>
+            <span>Artist</span>
+            <span>Year</span>
+            <span>Streams</span>
+            <span>Spotify Lists</span>
+            <span>Bass Line</span>
         </div>
+        <div id="tracksList"></div>
+
+        <div class="loading" id="loading">Loading more records...</div>
+        <div class="no-tracks" id="noTracks">No tracks found.</div>
+        <div class="error-message" id="errorMessage"></div>
+
+        <div id="scroll-trigger"></div>
+
+        <div id="pagination-data"></div>
     </section>
 </div>
+
+<!-- JavaScript to handle loading data, searching, and clearing -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // const loadDataBtn = document.querySelector('.load-data-btn');
+        const searchBtn = document.getElementById('searchBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const searchInput = document.getElementById('searchInput');
+        const searchType = document.getElementById('searchType');
+        // const tracksContainer = document.querySelector('.tracks-container');
+        const tracksList = document.getElementById('tracksList');
+        const loadingIndicator = document.getElementById('loading');
+        const noTracksMessage = document.getElementById('noTracks');
+        const errorMessage = document.getElementById('errorMessage');
+
+        let currentPage = 0;
+        let pageSize = 20;
+        let currentSearchQuery = '';
+        let currentSearchType = 'track';
+        let isLoading = false;
+        let hasMore = true;
+
+        searchBtn.addEventListener('click', function () {
+            currentSearchQuery = searchInput.value.trim();
+            currentSearchType = searchType.value;
+            tracksList.innerHTML = '';
+            currentPage = 0;
+            hasMore = true;
+            fetchTracks();
+        });
+
+        searchInput.addEventListener('keyup', function (event) {
+            if (event.key === 'Enter') {
+                searchBtn.click();
+            }
+        })
+
+        clearBtn.addEventListener('click', function () {
+                currentSearchQuery = searchInput.value = '';
+                tracksList.innerHTML = '';
+                currentPage = 0;
+                hasMore = true;
+                fetchTracks();
+            }
+        );
+
+        function showLoading() {
+            loadingIndicator.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loadingIndicator.style.display = 'none';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function displayError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideNoResults() {
+            noTracksMessage.style.display = 'none';
+        }
+
+        function showNoResults() {
+            noTracksMessage.style.display = 'block';
+        }
+
+        function buildApiUrl() {
+            let url = `/tracks/api?sortField=streams&sortOrder=desc&size=${pageSize}&page=${currentPage}`;
+            if (currentSearchQuery) {
+                url += `&search=${encodeURIComponent(currentSearchQuery)}&searchType=${encodeURIComponent(currentSearchType)}`;
+            }
+            return url;
+        }
+
+        function fetchTracks() {
+            if (isLoading || !hasMore) return;
+
+            isLoading = true;
+            showLoading();
+            hideNoResults();
+            hideError();
+
+            const url = buildApiUrl();
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error with status: ' + response.status);
+                    }
+                    return response.json()
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    if (data.tracks && data.tracks.length > 0) {
+                        renderTracks(data.tracks);
+                        currentPage = currentPage + 1;
+                        hasMore = data.hasNext;
+                    } else if (currentPage === 0) {
+                        showNoResults();
+                    } else {
+                        hasMore = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching tracks:', error);
+                    displayError('Error loading tracks: ' + error.message);
+                })
+                .finally(() => {
+                    isLoading = false;
+                    hideLoading();
+                });
+        }
+
+        function renderTracks(tracks) {
+            tracks.forEach(track => {
+                const trackElement = document.createElement('div');
+                trackElement.classList.add('track-item');
+                trackElement.innerHTML = `
+                    <span class="track-title" style="flex: 1;">${track.trackName}</span>
+                    <span class="track-artist" style="flex: 1;">${track.artistName}</span>
+                    <span class="track-year" style="flex: 1;">${track.releasedYear}</span>
+                    <span class="track-streams" style="flex: 1;">${track.streams}</span>
+                    <span class="track-spotify-lists" style="flex: 1;">${track.inSpotifyPlaylists}</span>
+                    <span class="track-bass-line"
+                        style="flex: 1;">${track.bassLine ? 'Yes' : 'No'}</span>
+                `;
+                tracksList.appendChild(trackElement);
+            });
+        }
+
+        // add infinite scroll
+        const scrollTrigger = document.getElementById('scroll-trigger');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    loadMoreTracks();
+                }
+            });
+        });
+        observer.observe(scrollTrigger);
+
+        function loadMoreTracks() {
+            fetchTracks();
+        }
+
+        // load initial tracks
+        fetchTracks();
+    });
+</script>
 
 </body>
 </html>
