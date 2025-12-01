@@ -254,11 +254,35 @@
         }
 
         function buildApiUrl() {
-            let url = `/tracks/api?sortField=streams&sortOrder=desc&size=${pageSize}&page=${currentPage}`;
+            const urlParams = new URLSearchParams({
+                sortField: 'streams',
+                sortOrder: 'desc',
+                size: pageSize,
+                page: currentPage
+            });
             if (currentSearchQuery) {
-                url += `&search=${encodeURIComponent(currentSearchQuery)}&searchType=${encodeURIComponent(currentSearchType)}`;
+                urlParams.append('search', currentSearchQuery);
+                urlParams.append('searchType', currentSearchType);
             }
-            return url;
+            return `/tracks/api?${urlParams.toString()}`;
+        }
+
+        function formatNumber(num) {
+            if (num >= 1_000_000_000) {
+                return (num / 1_000_000_000).toFixed(1) + 'B';
+            } else if (num >= 1_000_000) {
+                return (num / 1_000_000).toFixed(1) + 'M';
+            } else if (num >= 1_000) {
+                return (num / 1_000).toFixed(1) + 'K';
+            } else {
+                return num.toString();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         function fetchTracks() {
@@ -307,11 +331,11 @@
                 const trackElement = document.createElement('div');
                 trackElement.classList.add('track-item');
                 trackElement.innerHTML = `
-                    <span class="track-title" style="flex: 1;">${track.trackName}</span>
-                    <span class="track-artist" style="flex: 1;">${track.artistName}</span>
+                    <span class="track-title" style="flex: 1;">${escapeHtml(track.trackName)}</span>
+                    <span class="track-artist" style="flex: 1;">${escapeHtml(track.artistName)}</span>
                     <span class="track-year" style="flex: 1;">${track.releasedYear}</span>
-                    <span class="track-streams" style="flex: 1;">${track.streams}</span>
-                    <span class="track-spotify-lists" style="flex: 1;">${track.inSpotifyPlaylists}</span>
+                    <span class="track-streams" style="flex: 1;">${formatNumber(track.streams)}</span>
+                    <span class="track-spotify-lists" style="flex: 1;">${formatNumber(track.inSpotifyPlaylists)}</span>
                     <span class="track-bass-line"
                         style="flex: 1;">${track.bassLine ? 'Yes' : 'No'}</span>
                 `;
