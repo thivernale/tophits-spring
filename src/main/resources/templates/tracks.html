@@ -14,7 +14,7 @@
       }
 
       .container {
-        max-width: 900px;
+        max-width: 1200px;
         margin: 20px auto;
         padding: 20px;
         background-color: #ffffff;
@@ -76,6 +76,14 @@
         font-size: 16px;
       }
 
+      .search-controls .search-input {
+        flex: 3;
+      }
+
+      .search-container .search-type {
+        flex: 2;
+      }
+
       .search-btn,
       .clear-btn {
         padding: 10px 20px;
@@ -128,7 +136,6 @@
       .loading, .no-tracks, .error-message {
         text-align: center;
         padding: 20px;
-        display: none;
       }
 
       .loading, .no-tracks {
@@ -139,6 +146,56 @@
         color: red;
       }
 
+      .dialog {
+        border: none;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .load-data-list {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 20px;
+      }
+
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .item-action-btn {
+        padding: 6px 12px;
+        font-size: 14px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
 </head>
 <body>
@@ -152,8 +209,8 @@
 
     <section class="search-container">
         <div class="search-controls">
-            <input id="searchInput" placeholder="Search for tracks or artists..." type="text"/>
-            <select aria-label="Search type" id="searchType">
+            <input class="search-input" id="searchInput" placeholder="Search for tracks or artists..." type="text"/>
+            <select aria-label="Search type" class="search-type" id="searchType">
                 <option value="track">Track name</option>
                 <option value="artist">Artist name</option>
             </select>
@@ -173,25 +230,44 @@
         </div>
         <div id="tracksList"></div>
 
-        <div class="loading" id="loading">Loading more records...</div>
-        <div class="no-tracks" id="noTracks">No tracks found.</div>
-        <div class="error-message" id="errorMessage"></div>
+        <div class="loading" id="loading" style="display: none">Loading more records...</div>
+        <div class="no-tracks" id="noTracks" style="display: none">No tracks found.</div>
+        <div class="error-message" id="errorMessage" style="display: none"></div>
 
         <div id="scroll-trigger"></div>
 
         <div id="pagination-data"></div>
     </section>
+
+    <!-- Modal for loading data -->
+    <dialog class="dialog" id="loadDataModal">
+        <form method="dialog">
+            <!-- Modal header with close button -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Load Data</h2>
+                <button onclick="document.getElementById('loadDataModal').close();"
+                        style="font-size: 20px; background: none; border: none; cursor: pointer;"
+                        type="button">&times;
+                </button>
+            </div>
+            <!-- Modal body with initial spinner -->
+            <div class="load-data-list" id="dataFilesList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading available data files...</p>
+                </div>
+            </div>
+        </form>
+    </dialog>
 </div>
 
 <!-- JavaScript to handle loading data, searching, and clearing -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // const loadDataBtn = document.querySelector('.load-data-btn');
         const searchBtn = document.getElementById('searchBtn');
         const clearBtn = document.getElementById('clearBtn');
         const searchInput = document.getElementById('searchInput');
         const searchType = document.getElementById('searchType');
-        // const tracksContainer = document.querySelector('.tracks-container');
         const tracksList = document.getElementById('tracksList');
         const loadingIndicator = document.getElementById('loading');
         const noTracksMessage = document.getElementById('noTracks');
@@ -360,6 +436,78 @@
 
         // load initial tracks
         fetchTracks();
+    });
+
+    /**************************/
+    // Load Data Modal Logic
+    /**************************/
+    document.addEventListener('DOMContentLoaded', function () {
+        const loadDataBtn = document.querySelector('.load-data-btn');
+        const loadDataModal = document.getElementById('loadDataModal');
+        const loadDataList = document.getElementById('dataFilesList');
+
+        loadDataBtn.addEventListener('click', function () {
+            // fetch list of files to show in the modal
+            fetchDataFiles();
+
+            loadDataModal.showModal();
+        });
+
+        function fetchDataFiles() {
+            // display loading spinner
+            loadDataList.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading available data files...</p>
+                </div>
+            `;
+
+            fetch('/data/files')
+                .then(response => response.json())
+                .then(data => {
+                    // Process and display the list of files in the modal
+                    console.log('Data files:', data);
+
+                    loadDataList.innerHTML = '';
+                    const header = document.createElement('h3');
+                    header.textContent = 'Select a CSV file to load into the database';
+                    loadDataList.appendChild(header);
+                    if (data && data.length > 0) {
+                        data.forEach(file => {
+                            const fileItem = document.createElement('div');
+                            fileItem.classList.add('file-item');
+                            fileItem.innerHTML = `
+                                <span>${file}</span>
+                                <button class="item-action-btn" onclick="loadDataFile('${file}')">Load</button>
+                            `;
+                            loadDataList.appendChild(fileItem);
+                        });
+                    } else {
+                        loadDataList.innerHTML = '<p>No data files available.</p>';
+                    }
+                })
+                .catch(error => {
+                    loadDataList.innerHTML = `<p class="error-message">Error loading data files: ${error.message}</p>
+                    <button id="retryLoadBtn">Try again</button>`;
+                    document.getElementById('retryLoadBtn').addEventListener('click', fetchDataFiles);
+                    console.error('Error fetching data files:', error);
+                });
+        }
+
+        function loadDataFile(filename) {
+            // Placeholder function to load a specific data file
+            const url = `/data/load?file=${encodeURIComponent(filename)}`;
+            fetch(url, {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Data load response:', data);
+                    alert(`Data file ${filename} loaded successfully!`);
+                })
+                .catch(error => {
+                    console.error('Error loading data file:', error);
+                    alert(`Error loading data file ${filename}: ${error.message}`);
+                });
+        }
     });
 </script>
 
