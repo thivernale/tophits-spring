@@ -156,7 +156,6 @@
       .load-data-list {
         max-height: 300px;
         overflow-y: auto;
-        margin-top: 20px;
       }
 
       .file-item {
@@ -241,23 +240,23 @@
 
     <!-- Modal for loading data -->
     <dialog class="dialog" id="loadDataModal">
-        <form method="dialog">
-            <!-- Modal header with close button -->
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>Load Data</h2>
-                <button onclick="document.getElementById('loadDataModal').close();"
-                        style="font-size: 20px; background: none; border: none; cursor: pointer;"
-                        type="button">&times;
-                </button>
+        <!--        <form method="dialog" onsubmit="return false">-->
+        <!-- Modal header with close button -->
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Load Data</h2>
+            <button onclick="document.getElementById('loadDataModal').close();"
+                    style="font-size: 20px; background: none; border: none; cursor: pointer;"
+                    type="button">&times;
+            </button>
+        </div>
+        <!-- Modal body with initial spinner -->
+        <div class="load-data-list" id="dataFilesList">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading available data files...</p>
             </div>
-            <!-- Modal body with initial spinner -->
-            <div class="load-data-list" id="dataFilesList">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading available data files...</p>
-                </div>
-            </div>
-        </form>
+        </div>
+        <!--        </form>-->
     </dialog>
 </div>
 
@@ -393,7 +392,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching tracks:', error);
                     displayError('Error loading tracks: ' + error.message);
                 })
                 .finally(() => {
@@ -447,14 +445,12 @@
         const loadDataList = document.getElementById('dataFilesList');
 
         loadDataBtn.addEventListener('click', function () {
-            // fetch list of files to show in the modal
             fetchDataFiles();
 
             loadDataModal.showModal();
         });
 
         function fetchDataFiles() {
-            // display loading spinner
             loadDataList.innerHTML = `
                 <div class="loading">
                     <div class="spinner"></div>
@@ -490,25 +486,30 @@
                     loadDataList.innerHTML = `<p class="error-message">Error loading data files: ${error.message}</p>
                     <button id="retryLoadBtn">Try again</button>`;
                     document.getElementById('retryLoadBtn').addEventListener('click', fetchDataFiles);
-                    console.error('Error fetching data files:', error);
-                });
-        }
-
-        function loadDataFile(filename) {
-            // Placeholder function to load a specific data file
-            const url = `/data/load?file=${encodeURIComponent(filename)}`;
-            fetch(url, {method: 'POST'})
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Data load response:', data);
-                    alert(`Data file ${filename} loaded successfully!`);
-                })
-                .catch(error => {
-                    console.error('Error loading data file:', error);
-                    alert(`Error loading data file ${filename}: ${error.message}`);
                 });
         }
     });
+
+    function loadDataFile(filename) {
+        const loadDataList = document.getElementById('dataFilesList');
+        const url = `/data/load/${encodeURIComponent(filename)}`;
+        fetch(url, {method: 'POST'})
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP error with status: ' + response.status);
+                }
+                return response.json()
+            })
+            .then(data => {
+                console.log('Data load response:', data);
+                alert(`Data file ${filename} loaded successfully!`);
+            })
+            .catch(error => {
+                const loadDataList = document.getElementById('dataFilesList');
+                loadDataList.innerHTML = `<p class="error-message">Error loading data file ${filename}: ${error.message}</p>
+                <button onclick="document.querySelector('.load-data-btn').click()" class="item-action-btn">Back to files</button>`;
+            });
+    }
 </script>
 
 </body>
