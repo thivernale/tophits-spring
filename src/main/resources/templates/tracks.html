@@ -493,21 +493,29 @@
     function loadDataFile(filename) {
         const loadDataList = document.getElementById('dataFilesList');
         const url = `/data/load/${encodeURIComponent(filename)}`;
+
+        function prepareErrorDisplay(message, errorList = []) {
+            return `<p class="error-message">Error loading data file ${filename}: ${message}</p>
+                <ul class="error-message" style="text-align: start;">${errorList.map(text => `<li>${text}</li>`).join('')}</ul>
+                <button onclick="document.querySelector('.load-data-btn').click()" class="item-action-btn">Back to files</button>`;
+        }
+
         fetch(url, {method: 'POST'})
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('HTTP error with status: ' + response.status);
-                }
                 return response.json()
             })
             .then(data => {
+                if (!data.success) {
+                    loadDataList.innerHTML = prepareErrorDisplay(data.message, data.errors);
+                    return;
+                }
+
+// TODO display success results better
                 console.log('Data load response:', data);
                 alert(`Data file ${filename} loaded successfully!`);
             })
             .catch(error => {
-                const loadDataList = document.getElementById('dataFilesList');
-                loadDataList.innerHTML = `<p class="error-message">Error loading data file ${filename}: ${error.message}</p>
-                <button onclick="document.querySelector('.load-data-btn').click()" class="item-action-btn">Back to files</button>`;
+                loadDataList.innerHTML = prepareErrorDisplay(error.message);
             });
     }
 </script>
