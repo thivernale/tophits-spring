@@ -25,39 +25,33 @@ class DataLoadingServiceTest {
 
     @BeforeEach
     void setUp() {
-        dataLoadingService = new DataLoadingService(trackRepo);
+        dataLoadingService = new DataLoadingService(trackRepo, null);
+        // ReflectionTestUtils.setField(dataLoadingService, "trackRepository", null);
     }
 
     @Test
     void listFiles() {
-        assertThatNoException()
-            .isThrownBy(() -> {
-                List<String> dataFiles = dataLoadingService.getAvailableCsvFiles();
+        assertThatNoException().isThrownBy(() -> {
+            List<String> dataFiles = dataLoadingService.getAvailableCsvFiles();
 
-                assertThat(dataFiles)
-                    .isNotEmpty()
-                    .isNotNull()
-                    .size()
-                    .isEqualTo(1);
-                assertThat(dataFiles.getFirst()).isEqualTo("spotify-2023.csv");
-            });
+            assertThat(dataFiles).isNotEmpty()
+                .isNotNull()
+                .size()
+                .isEqualTo(1);
+            assertThat(dataFiles.getFirst()).isEqualTo("spotify-2023.csv");
+        });
     }
 
     @Test
     void loadCsvFile() {
+        when(trackRepo.save(any(Track.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(trackRepo.save(any(Track.class)))
-            .thenAnswer(invocation -> invocation.getArgument(0));
+        assertThatNoException().isThrownBy(() -> {
+            var loadResult = dataLoadingService.loadCsvFile("spotify-2023.csv");
 
-        assertThatNoException()
-            .isThrownBy(() -> {
-                var loadResult = dataLoadingService.loadCsvFile("spotify-2023.csv");
-
-                assertThat(loadResult.successCount())
-                    .isGreaterThan(0);
-                assertThat(loadResult.errorCount())
-                    .isZero();
-            });
+            assertThat(loadResult.successCount()).isGreaterThan(0);
+            assertThat(loadResult.errorCount()).isZero();
+        });
     }
 
     @ParameterizedTest(name = "Parsing CSV line: {0}")
@@ -67,7 +61,6 @@ class DataLoadingServiceTest {
         "\"Song with comma, in title\",\"Artist, Name\",1,2022,5,15,1000,20,12345678,30,40,50,5,60,120,G,Major,80,60,70,50,10,20,5"
     })
     void parseCsvLine(String line) {
-        assertThat(dataLoadingService.parseCsvLine(line))
-            .hasSize(24);
+        assertThat(dataLoadingService.parseCsvLine(line)).hasSize(24);
     }
 }

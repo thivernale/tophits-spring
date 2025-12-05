@@ -1,5 +1,7 @@
 package org.thivernale.tophits.services;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.relational.core.mapping.Column;
@@ -23,6 +25,7 @@ import java.util.stream.Stream;
 public class DataLoadingService {
     private static final String DATA_DIRECTORY = "data/";
     private final TrackRepository trackRepository;
+    private final Validator validator;
 
     public List<String> getAvailableCsvFiles() {
         Path path = Path.of(DATA_DIRECTORY);
@@ -57,7 +60,7 @@ public class DataLoadingService {
         AtomicInteger index = new AtomicInteger(1);
         List<String> errors = new ArrayList<>();
 
-        try (var reader = Files.newBufferedReader(path, StandardCharsets.ISO_8859_1)) {
+        try (var reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             String headerLine = reader.readLine();
             if (headerLine == null) {
                 throw new IllegalArgumentException("File is empty: " + fileName);
@@ -69,7 +72,9 @@ public class DataLoadingService {
 
             reader
                 .lines()
+                //TODO remove filters below
                 //.filter(line -> line.startsWith("BESO"))
+                .filter(line -> line.startsWith("ЧЕР")) // test import of Cyrillic named tracks
                 .forEach(s -> {
                     index.getAndIncrement();
                     try {
@@ -80,7 +85,10 @@ public class DataLoadingService {
                             return;
                         }
                         Track track = createTrackFromCsvData(headers, values);
-                        Track savedTrack = track;//TODO remove trackRepository.save(track);
+                        log.info("Values: {}", values);
+                        log.info("Track: {}", track);
+                        //TODO remove
+                        Track savedTrack = trackRepository.save(track);
                         log.info("Saved track with ID: {}", savedTrack.getId());
                     } catch (Exception e) {
                         log.error("Error processing line {}: {}", index, e.getMessage());
@@ -171,6 +179,18 @@ public class DataLoadingService {
                     throw new RuntimeException(e);
                 }
             });
+
+        Set<ConstraintViolation<Track>> violationSet = validator.validate(track);
+        if (!violationSet.isEmpty()) {
+            String violations = violationSet.stream()
+                .map(trackConstraintViolation -> trackConstraintViolation.getPropertyPath()
+                    .iterator()
+                    .next() +
+                    " " +
+                    trackConstraintViolation.getMessage())
+                .collect(Collectors.joining("; "));
+            throw new IllegalArgumentException("Validation failed for track: " + violations);
+        }
 
         return track;
     }

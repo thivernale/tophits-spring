@@ -146,15 +146,72 @@
         color: red;
       }
 
-      .dialog {
+      div.success-container {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #c3e6cb;
+        background-color: #d4edda;
+        color: #155724;
+      }
+
+      div.error-container {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #f5c6cb;
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+
+      div.details-container {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f1f1f1;
+        border: 1px solid #ced4da;
+        color: #495057;
+      }
+
+      div.details-container ul li {
+        font-size: small;
+      }
+
+      dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      dialog {
         border: none;
+        padding: 0;
         border-radius: 8px;
+        max-width: 90%;
+        background-color: transparent;
+      }
+
+      .modal-content {
+        margin: 0;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        width: 500px;
+        max-width: 90%;
+        position: relative;
         padding: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        max-height: 80vh;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 20px;
       }
 
       .load-data-list {
-        max-height: 300px;
+        max-height: 500px;
         overflow-y: auto;
       }
 
@@ -234,33 +291,30 @@
         <div class="error-message" id="errorMessage" style="display: none"></div>
 
         <div id="scroll-trigger"></div>
-
-        <div id="pagination-data"></div>
     </section>
 
     <!-- Modal for loading data -->
     <dialog class="dialog" id="loadDataModal">
-        <!--        <form method="dialog" onsubmit="return false">-->
-        <!-- Modal header with close button -->
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>Load Data</h2>
-            <button onclick="document.getElementById('loadDataModal').close();"
-                    style="font-size: 20px; background: none; border: none; cursor: pointer;"
-                    type="button">&times;
-            </button>
-        </div>
-        <!-- Modal body with initial spinner -->
-        <div class="load-data-list" id="dataFilesList">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading available data files...</p>
+        <div class="modal-content">
+            <!-- Modal header with close button -->
+            <div class="modal-header">
+                <h2 class="modal-title">Load CSV Data</h2>
+                <button onclick="closeDataModal()"
+                        style="font-size: 20px; background: none; border: none; cursor: pointer;"
+                        type="button">&times;
+                </button>
+            </div>
+            <!-- Modal body with initial spinner -->
+            <div class="load-data-list" id="dataFilesList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading available data files...</p>
+                </div>
             </div>
         </div>
-        <!--        </form>-->
     </dialog>
 </div>
 
-<!-- JavaScript to handle loading data, searching, and clearing -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchBtn = document.getElementById('searchBtn');
@@ -439,15 +493,29 @@
     /**************************/
     // Load Data Modal Logic
     /**************************/
+
+    function closeDataModal() {
+        const loadDataModal = document.getElementById('loadDataModal');
+        loadDataModal.close();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const loadDataBtn = document.querySelector('.load-data-btn');
         const loadDataModal = document.getElementById('loadDataModal');
         const loadDataList = document.getElementById('dataFilesList');
 
-        loadDataBtn.addEventListener('click', function () {
+        loadDataBtn.addEventListener('click', function (e) {
             fetchDataFiles();
 
             loadDataModal.showModal();
+        });
+
+        loadDataModal.addEventListener('click', function (event) {
+            const dialog = this;
+            const rect = dialog.getBoundingClientRect();
+            if (event.target === dialog) {
+                dialog.close();
+            }
         });
 
         function fetchDataFiles() {
@@ -462,8 +530,6 @@
                 .then(response => response.json())
                 .then(data => {
                     // Process and display the list of files in the modal
-                    console.log('Data files:', data);
-
                     loadDataList.innerHTML = '';
                     const header = document.createElement('h3');
                     header.textContent = 'Select a CSV file to load into the database';
@@ -490,32 +556,63 @@
         }
     });
 
+    function prepareDisplayResult(data, fileName) {
+        const {message, errors = [], successCount = 0, errorCount = 0} = data;
+
+        let html = '';
+        if (data.success) {
+            html += `<div class="success-container">
+                        <h3>Data Load Successful</h3>
+                        <p>File: ${fileName}</p>
+                        <p>Records Loaded: ${successCount}</p>
+                        <p>Errors: ${errorCount}</p>
+                    </div>`;
+        } else {
+            html += `<div class="error-container"><p>Error: ${message}</p></div>`;
+        }
+
+        if (data.errors && data.errors.length > 0) {
+            html += `<div class="details-container">
+                    <p>Error details:</p>
+                    <ul style="text-align: start;">${errors.map(text => `<li>${text}</li>`).join('')}</ul>
+                </div>
+                `;
+        }
+        html += `<div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <button onclick="document.querySelector('.load-data-btn').click()" class="item-action-btn">Load another file</button>
+                    <button class="item-action-btn" onclick="closeDataModal()">Close</button>
+                </div>`;
+
+        if (successCount > 0) {
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+
+        return html;
+    }
+
     function loadDataFile(filename) {
         const loadDataList = document.getElementById('dataFilesList');
         const url = `/data/load/${encodeURIComponent(filename)}`;
 
-        function prepareErrorDisplay(message, errorList = []) {
-            return `<p class="error-message">Error loading data file ${filename}: ${message}</p>
-                <ul class="error-message" style="text-align: start;">${errorList.map(text => `<li>${text}</li>`).join('')}</ul>
-                <button onclick="document.querySelector('.load-data-btn').click()" class="item-action-btn">Back to files</button>`;
-        }
+        // display loading spinner
+        loadDataList.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading data file ${filename}...</p>
+            </div>
+        `;
 
         fetch(url, {method: 'POST'})
             .then(response => {
                 return response.json()
             })
             .then(data => {
-                if (!data.success) {
-                    loadDataList.innerHTML = prepareErrorDisplay(data.message, data.errors);
-                    return;
-                }
-
-// TODO display success results better
-                console.log('Data load response:', data);
-                alert(`Data file ${filename} loaded successfully!`);
+                loadDataList.innerHTML = prepareDisplayResult(data);
             })
             .catch(error => {
-                loadDataList.innerHTML = prepareErrorDisplay(error.message);
+                loadDataList.innerHTML = `<div class="error-container"><p>Error: Failed to load file ${filename}: ${error.message}</p></div>`;
             });
     }
 </script>
