@@ -1,5 +1,6 @@
 package org.thivernale.tophits.redis;
 
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
@@ -9,12 +10,22 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.geo.*;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.ReactiveGeoOperations;
 import org.springframework.data.redis.core.ReactiveListOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.domain.geo.GeoLocation;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
+import org.thivernale.tophits.repositories.TrackRepository;
 import reactor.core.publisher.Flux;
 
 import java.io.Serializable;
@@ -75,6 +86,52 @@ public class RedisDataPractice {
         };
     }
 
+    @Bean
+    ChannelTopic topic() {
+        return new ChannelTopic("pubsub-topic");
+    }
+
+    @Bean
+    MessageListenerAdapter messageListenerAdapter() {
+        MessageListenerAdapter messageListenerAdapter = new MessageListenerAdapter();
+        Jackson2JsonRedisSerializer<Response> serializer = new Jackson2JsonRedisSerializer<>(Response.class);
+        messageListenerAdapter.setDelegate(new MessageListener() {
+            @Override
+            public void onMessage(@NonNull Message message, byte[] pattern) {
+                log.warn("Received message: {}", message);
+
+                try {
+                    Response response = serializer.deserialize(message.getBody());
+                    log.info("Deserialized response: {}", response);
+                } catch (Exception e) {
+                    log.error("Failed to deserialize message", e);
+                }
+            }
+        });
+        messageListenerAdapter.setSerializer(
+            serializer
+        );
+        return messageListenerAdapter;
+    }
+
+    @Bean
+    RedisMessageListenerContainer messageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
+        RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
+        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
+        redisMessageListenerContainer.addMessageListener(messageListenerAdapter(), topic());
+        return redisMessageListenerContainer;
+    }
+
+    @Bean
+    public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<Object, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+        template.setDefaultSerializer(
+            new Jackson2JsonRedisSerializer<>(Response.class)
+        );
+        return template;
+    }
+
     private Response time(ExpensiveService service, StopWatch stopWatch, double input) {
         stopWatch.start();
         Response response = service.performExpensiveCalculation(input);
@@ -84,16 +141,45 @@ public class RedisDataPractice {
         return response;
     }
 
-    record Response(String message) implements Serializable {
+    public record Response(String message) implements Serializable {
     }
 
     @Service
-    static class ExpensiveService {
-        @Cacheable(value = "expensiveCalculation")
+    @RequiredArgsConstructor
+    public static class ExpensiveService {
+
+        private final RedisTemplate<Object, Object> redisTemplate;
+
+        private final ChannelTopic topic;
+
+        private final TrackRepository trackRepository;
+
+        @Cacheable(key = "#input", cacheNames = "expensiveCalculation")
         @SneakyThrows
         public Response performExpensiveCalculation(double input) {
             Thread.sleep(5_000);
             return new Response("Response from %f at %s%n%n".formatted(input, Instant.now()));
         }
+
+        public Response nonCachedCalculation(double input) {
+            Response result = new Response("Response from %f at %s%n%n".formatted(input, Instant.now()));
+
+            redisTemplate.convertAndSend(topic.getTopic(), result);
+
+            return result;
+        }
+
+        public void saveTrack(long trackId) {
+            trackRepository.findById(trackId)
+                .ifPresent(track -> {
+                    System.out.println("Track found: " + track.getTrackName());
+//                redisTemplate.opsForHash()
+//                    .put("tracks-hash", trackId, track);
+                    Object o = redisTemplate.opsForHash()
+                        .get("tracks-hash", trackId);
+                    log.info("From Redis: {}", o);
+                });
+        }
+
     }
 }
