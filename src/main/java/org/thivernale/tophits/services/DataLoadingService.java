@@ -72,9 +72,6 @@ public class DataLoadingService {
 
             reader
                 .lines()
-                //TODO remove filters below
-                //.filter(line -> line.startsWith("BESO"))
-                .filter(line -> line.startsWith("ЧЕР")) // test import of Cyrillic named tracks
                 .forEach(s -> {
                     index.getAndIncrement();
                     try {
@@ -85,9 +82,6 @@ public class DataLoadingService {
                             return;
                         }
                         Track track = createTrackFromCsvData(headers, values);
-                        log.info("Values: {}", values);
-                        log.info("Track: {}", track);
-                        //TODO remove
                         Track savedTrack = trackRepository.save(track);
                         log.info("Saved track with ID: {}", savedTrack.getId());
                     } catch (Exception e) {
