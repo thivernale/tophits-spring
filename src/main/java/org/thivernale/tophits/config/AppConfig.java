@@ -50,11 +50,6 @@ public class AppConfig implements WebMvcConfigurer {
         return filterRegistrationBean;
     }
 
-    @Bean
-    ApplicationListener<ApplicationReadyEvent> publisher(ApplicationEventPublisher publisher) {
-        return event -> publisher.publishEvent(new AppListeners.CustomAppEvent(event.getSource()));
-    }
-
     //@Bean
     public CommandLineRunner demo(ApplicationContext ctx, TrackRepository repo) {
         return args -> {
@@ -68,5 +63,10 @@ public class AppConfig implements WebMvcConfigurer {
 
             System.out.println(repo.count());
         };
+    }
+
+    @Bean
+    ApplicationListener<ApplicationReadyEvent> publisher(ApplicationEventPublisher publisher) {
+        return event -> publisher.publishEvent(new AppListeners.CustomAppEvent(event.getSource()));
     }
 }

@@ -4,12 +4,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Getter
 @Setter
+@ToString
 @Table(name = "tracks")
 public class Track {
     @Id
@@ -71,34 +73,34 @@ public class Track {
     private Integer inShazamCharts = 0;
 
     @Column("bpm")
-    private Integer bpm;
+    private Integer bpm = null;
 
     @Size(max = 10)
     @Column("key_signature")
-    private String keySignature;
+    private String keySignature = null;
 
     @Size(max = 10)
     @Column("mode")
-    private String mode;
+    private String mode = null;
 
     @Column("danceability_percent")
-    private Integer danceabilityPercent;
+    private Integer danceabilityPercent = null;
 
     @Column("valence_percent")
-    private Integer valencePercent;
+    private Integer valencePercent = null;
 
     @Column("energy_percent")
-    private Integer energyPercent;
+    private Integer energyPercent = null;
 
     @Column("acousticness_percent")
-    private Integer acousticnessPercent;
+    private Integer acousticnessPercent = null;
 
     @Column("instrumentalness_percent")
-    private Integer instrumentalnessPercent;
+    private Integer instrumentalnessPercent = null;
 
     @Column("liveness_percent")
-    private Integer livenessPercent;
+    private Integer livenessPercent = null;
 
     @Column("speechiness_percent")
-    private Integer speechinessPercent;
+    private Integer speechinessPercent = null;
 }

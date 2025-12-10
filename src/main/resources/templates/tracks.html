@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Tracks - Top Hits</title>
+    <style>
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8f9fa;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #ffffff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .header {
+        background-color: #343a40;
+        color: white;
+        padding: 10px 0;
+        position: relative;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      .total-count {
+        margin-top: 5px;
+        font-size: 16px;
+      }
+
+      .load-data-btn {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        padding: 8px 16px;
+        font-size: 14px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .load-data-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .search-container {
+        margin-bottom: 20px;
+      }
+
+      .search-controls {
+        display: flex;
+        gap: 10px;
+      }
+
+      .search-controls input,
+      .search-controls select {
+        flex: 1;
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      .search-controls .search-input {
+        flex: 3;
+      }
+
+      .search-container .search-type {
+        flex: 2;
+      }
+
+      .search-btn,
+      .clear-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      .search-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+      }
+
+      .clear-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+      }
+
+      .search-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .clear-btn:hover {
+        background-color: #5a6268;
+      }
+
+      .tracks-container {
+        margin-top: 20px;
+      }
+
+      .track-list-header {
+        display: flex;
+        font-weight: bold;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 10px;
+      }
+
+      .track-list-header span {
+        flex: 1;
+        text-align: left;
+      }
+
+      .track-item {
+        display: flex;
+        padding: 10px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .loading, .no-tracks, .error-message {
+        text-align: center;
+        padding: 20px;
+      }
+
+      .loading, .no-tracks {
+        color: #6c757d;
+      }
+
+      .error-message {
+        color: red;
+      }
+
+      div.success-container {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #c3e6cb;
+        background-color: #d4edda;
+        color: #155724;
+      }
+
+      div.error-container {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #f5c6cb;
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+
+      div.details-container {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f1f1f1;
+        border: 1px solid #ced4da;
+        color: #495057;
+      }
+
+      div.details-container ul li {
+        font-size: small;
+      }
+
+      dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      dialog {
+        border: none;
+        padding: 0;
+        border-radius: 8px;
+        max-width: 90%;
+        background-color: transparent;
+      }
+
+      .modal-content {
+        margin: 0;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        width: 500px;
+        max-width: 90%;
+        position: relative;
+        padding: 20px;
+        max-height: 80vh;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .modal-title {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .load-data-list {
+        max-height: 500px;
+        overflow-y: auto;
+      }
+
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .item-action-btn {
+        padding: 6px 12px;
+        font-size: 14px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+</head>
+<body>
+<!-- main container with header, search bar, and track list -->
+<div class="container">
+    <header class="header">
+        <button class="load-data-btn">Load data</button>
+        <h1>Music Tracks Database</h1>
+        <div class="total-count">Total Tracks: <span th:text="${totalCount}">0</span></div>
+    </header>
+
+    <section class="search-container">
+        <div class="search-controls">
+            <input class="search-input" id="searchInput" placeholder="Search for tracks or artists..." type="text"/>
+            <select aria-label="Search type" class="search-type" id="searchType">
+                <option value="track">Track name</option>
+                <option value="artist">Artist name</option>
+            </select>
+            <button class="search-btn" id="searchBtn" type="button">Search</button>
+            <button class="clear-btn" id="clearBtn" type="button">Clear</button>
+        </div>
+    </section>
+
+    <section class="tracks-container" id="tracksContainer">
+        <div class="track-list-header">
+            <span>Track Name</span>
+            <span>Artist</span>
+            <span>Year</span>
+            <span>Streams</span>
+            <span>Spotify Lists</span>
+            <span>Bass Line</span>
+        </div>
+        <div id="tracksList"></div>
+
+        <div class="loading" id="loading" style="display: none">Loading more records...</div>
+        <div class="no-tracks" id="noTracks" style="display: none">No tracks found.</div>
+        <div class="error-message" id="errorMessage" style="display: none"></div>
+
+        <div id="scroll-trigger"></div>
+    </section>
+
+    <!-- Modal for loading data -->
+    <dialog class="dialog" id="loadDataModal">
+        <div class="modal-content">
+            <!-- Modal header with close button -->
+            <div class="modal-header">
+                <h2 class="modal-title">Load CSV Data</h2>
+                <button onclick="closeDataModal()"
+                        style="font-size: 20px; background: none; border: none; cursor: pointer;"
+                        type="button">&times;
+                </button>
+            </div>
+            <!-- Modal body with initial spinner -->
+            <div class="load-data-list" id="dataFilesList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading available data files...</p>
+                </div>
+            </div>
+        </div>
+    </dialog>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchBtn = document.getElementById('searchBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const searchInput = document.getElementById('searchInput');
+        const searchType = document.getElementById('searchType');
+        const tracksList = document.getElementById('tracksList');
+        const loadingIndicator = document.getElementById('loading');
+        const noTracksMessage = document.getElementById('noTracks');
+        const errorMessage = document.getElementById('errorMessage');
+
+        let currentPage = 0;
+        let pageSize = 20;
+        let currentSearchQuery = '';
+        let currentSearchType = 'track';
+        let isLoading = false;
+        let hasMore = true;
+
+        searchBtn.addEventListener('click', function () {
+            currentSearchQuery = searchInput.value.trim();
+            currentSearchType = searchType.value;
+            tracksList.innerHTML = '';
+            currentPage = 0;
+            hasMore = true;
+            fetchTracks();
+        });
+
+        searchInput.addEventListener('keyup', function (event) {
+            if (event.key === 'Enter') {
+                searchBtn.click();
+            }
+        })
+
+        clearBtn.addEventListener('click', function () {
+                currentSearchQuery = searchInput.value = '';
+                tracksList.innerHTML = '';
+                currentPage = 0;
+                hasMore = true;
+                fetchTracks();
+            }
+        );
+
+        function showLoading() {
+            loadingIndicator.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loadingIndicator.style.display = 'none';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function displayError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideNoResults() {
+            noTracksMessage.style.display = 'none';
+        }
+
+        function showNoResults() {
+            noTracksMessage.style.display = 'block';
+        }
+
+        function buildApiUrl() {
+            const urlParams = new URLSearchParams({
+                sortField: 'streams',
+                sortOrder: 'desc',
+                size: pageSize,
+                page: currentPage
+            });
+            if (currentSearchQuery) {
+                urlParams.append('search', currentSearchQuery);
+                urlParams.append('searchType', currentSearchType);
+            }
+            return `/tracks/api?${urlParams.toString()}`;
+        }
+
+        function formatNumber(num) {
+            if (num >= 1_000_000_000) {
+                return (num / 1_000_000_000).toFixed(1) + 'B';
+            } else if (num >= 1_000_000) {
+                return (num / 1_000_000).toFixed(1) + 'M';
+            } else if (num >= 1_000) {
+                return (num / 1_000).toFixed(1) + 'K';
+            } else {
+                return num.toString();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function fetchTracks() {
+            if (isLoading || !hasMore) return;
+
+            isLoading = true;
+            showLoading();
+            hideNoResults();
+            hideError();
+
+            const url = buildApiUrl();
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error with status: ' + response.status);
+                    }
+                    return response.json()
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+
+                    if (data.tracks && data.tracks.length > 0) {
+                        renderTracks(data.tracks);
+                        currentPage = currentPage + 1;
+                        hasMore = data.hasNext;
+                    } else if (currentPage === 0) {
+                        showNoResults();
+                    } else {
+                        hasMore = false;
+                    }
+                })
+                .catch(error => {
+                    displayError('Error loading tracks: ' + error.message);
+                })
+                .finally(() => {
+                    isLoading = false;
+                    hideLoading();
+                });
+        }
+
+        function renderTracks(tracks) {
+            tracks.forEach(track => {
+                const trackElement = document.createElement('div');
+                trackElement.classList.add('track-item');
+                trackElement.innerHTML = `
+                    <span class="track-title" style="flex: 1;">${escapeHtml(track.trackName)}</span>
+                    <span class="track-artist" style="flex: 1;">${escapeHtml(track.artistName)}</span>
+                    <span class="track-year" style="flex: 1;">${track.releasedYear}</span>
+                    <span class="track-streams" style="flex: 1;">${formatNumber(track.streams)}</span>
+                    <span class="track-spotify-lists" style="flex: 1;">${formatNumber(track.inSpotifyPlaylists)}</span>
+                    <span class="track-bass-line"
+                        style="flex: 1;">${track.bassLine ? 'Yes' : 'No'}</span>
+                `;
+                tracksList.appendChild(trackElement);
+            });
+        }
+
+        // add infinite scroll
+        const scrollTrigger = document.getElementById('scroll-trigger');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    loadMoreTracks();
+                }
+            });
+        });
+        observer.observe(scrollTrigger);
+
+        function loadMoreTracks() {
+            fetchTracks();
+        }
+
+        // load initial tracks
+        fetchTracks();
+    });
+
+    /**************************/
+    // Load Data Modal Logic
+    /**************************/
+
+    function closeDataModal() {
+        const loadDataModal = document.getElementById('loadDataModal');
+        loadDataModal.close();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const loadDataBtn = document.querySelector('.load-data-btn');
+        const loadDataModal = document.getElementById('loadDataModal');
+        const loadDataList = document.getElementById('dataFilesList');
+
+        loadDataBtn.addEventListener('click', function (e) {
+            fetchDataFiles();
+
+            loadDataModal.showModal();
+        });
+
+        loadDataModal.addEventListener('click', function (event) {
+            const dialog = this;
+            const rect = dialog.getBoundingClientRect();
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+
+        function fetchDataFiles() {
+            loadDataList.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading available data files...</p>
+                </div>
+            `;
+
+            fetch('/data/files')
+                .then(response => response.json())
+                .then(data => {
+                    // Process and display the list of files in the modal
+                    loadDataList.innerHTML = '';
+                    const header = document.createElement('h3');
+                    header.textContent = 'Select a CSV file to load into the database';
+                    loadDataList.appendChild(header);
+                    if (data && data.length > 0) {
+                        data.forEach(file => {
+                            const fileItem = document.createElement('div');
+                            fileItem.classList.add('file-item');
+                            fileItem.innerHTML = `
+                                <span>${file}</span>
+                                <button class="item-action-btn" onclick="loadDataFile('${file}')">Load</button>
+                            `;
+                            loadDataList.appendChild(fileItem);
+                        });
+                    } else {
+                        loadDataList.innerHTML = '<p>No data files available.</p>';
+                    }
+                })
+                .catch(error => {
+                    loadDataList.innerHTML = `<p class="error-message">Error loading data files: ${error.message}</p>
+                    <button id="retryLoadBtn">Try again</button>`;
+                    document.getElementById('retryLoadBtn').addEventListener('click', fetchDataFiles);
+                });
+        }
+    });
+
+    function prepareDisplayResult(data, fileName) {
+        const {message, errors = [], successCount = 0, errorCount = 0} = data;
+
+        let html = '';
+        if (data.success) {
+            html += `<div class="success-container">
+                        <h3>Data Load Successful</h3>
+                        <p>File: ${fileName}</p>
+                        <p>Records Loaded: ${successCount}</p>
+                        <p>Errors: ${errorCount}</p>
+                    </div>`;
+        } else {
+            html += `<div class="error-container"><p>Error: ${message}</p></div>`;
+        }
+
+        if (data.errors && data.errors.length > 0) {
+            html += `<div class="details-container">
+                    <p>Error details:</p>
+                    <ul style="text-align: start;">${errors.map(text => `<li>${text}</li>`).join('')}</ul>
+                </div>
+                `;
+        }
+        html += `<div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <button onclick="document.querySelector('.load-data-btn').click()" class="item-action-btn">Load another file</button>
+                    <button class="item-action-btn" onclick="closeDataModal()">Close</button>
+                </div>`;
+
+        if (successCount > 0) {
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        }
+
+        return html;
+    }
+
+    function loadDataFile(filename) {
+        const loadDataList = document.getElementById('dataFilesList');
+        const url = `/data/load/${encodeURIComponent(filename)}`;
+
+        // display loading spinner
+        loadDataList.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading data file ${filename}...</p>
+            </div>
+        `;
+
+        fetch(url, {method: 'POST'})
+            .then(response => {
+                return response.json()
+            })
+            .then(data => {
+                loadDataList.innerHTML = prepareDisplayResult(data);
+            })
+            .catch(error => {
+                loadDataList.innerHTML = `<div class="error-container"><p>Error: Failed to load file ${filename}: ${error.message}</p></div>`;
+            });
+    }
+</script>
+
+</body>
+</html>
