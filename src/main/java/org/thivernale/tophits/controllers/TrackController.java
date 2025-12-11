@@ -9,9 +9,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.thivernale.tophits.models.Track;
+import org.thivernale.tophits.services.BassLineService;
 import org.thivernale.tophits.services.TrackService;
 
 import java.util.Collections;
+import java.util.List;
 
 @Controller
 @RequestMapping("/tracks")
@@ -19,6 +21,7 @@ import java.util.Collections;
 @Slf4j
 public class TrackController {
     private final TrackService trackService;
+    private final BassLineService bassLineService;
 
     // endpoint for page skeleton
     @GetMapping
@@ -88,7 +91,7 @@ public class TrackController {
     // endpoint for fetching single track details by ID as JSON
     @GetMapping("/api/{id}")
     @ResponseBody
-    public ResponseEntity<Track> getTrackById(@PathVariable(name = "id") Long id) {
+    public ResponseEntity<Track> getTrackById(@PathVariable Long id) {
         Track track = trackService.findById(id);
         if (track != null) {
             return ResponseEntity.ok(track);
@@ -98,10 +101,34 @@ public class TrackController {
         }
     }
 
-    // TODO generate bass line tabs and extract midi notes
+    @PostMapping("/api/{id}/bass-line")
+    @ResponseBody
+    public ResponseEntity<BassLineResponse> generateBassLine(@PathVariable Long id) {
+        log.info("Generating Bass Line for track: {}", id);
+
+        try {
+            Track track = trackService.findById(id);
+            if (track != null) {
+                return ResponseEntity.ok(new BassLineResponse(id, track.getTrackName(), track.getArtistName(), bassLineService.generateBassLine(track), null));
+            } else {
+                return ResponseEntity.notFound()
+                    .build();
+            }
+        } catch (Exception e) {
+            log.error("Error generating Bass Line: {}", e.getMessage());
+
+            return ResponseEntity.internalServerError()
+                .body(new BassLineResponse(id, null, null, "There was an error generating bass line tabs. Please, try again later.", e.getMessage()));
+        }
+    }
+
+    // TODO extract midi notes
+
+    public record BassLineResponse(Long id, String trackName, String artistName, String content, String error) {
+    }
 
     public record TracksResponse(
-        java.util.List<Track> tracks,
+        List<Track> tracks,
         int currentPage,
         long totalCount,
         int pageNumber,
@@ -125,5 +152,4 @@ public class TrackController {
         boolean last
     ) {
     }
-
 }
