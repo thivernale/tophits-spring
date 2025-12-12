@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import redis.clients.jedis.JedisPooled;
 
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Slf4j
 @Configuration
+@Profile("ai-data-practice")
 public class AiDataPractice {
     @Bean
     JedisPooled jedisPooled() {
