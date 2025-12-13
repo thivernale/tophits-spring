@@ -138,6 +138,7 @@
                             <artifactId>lombok</artifactId>
                         </path>
                     </annotationProcessorPaths>
+                    <enablePreview>true</enablePreview>
                 </configuration>
             </plugin>
             <plugin>
