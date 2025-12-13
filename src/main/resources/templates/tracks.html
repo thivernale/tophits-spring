@@ -313,6 +313,27 @@
             </div>
         </div>
     </dialog>
+
+    <!-- Modal for loading bass line data -->
+    <dialog class="dialog" id="loadBassLineModal">
+        <div class="modal-content">
+            <!-- Modal header with close button -->
+            <div class="modal-header">
+                <h2 class="modal-title">Bass Line Tabs - <span id="bassLineTrackName"></span></h2>
+                <button onclick="closeBassLineModal()"
+                        style="font-size: 20px; background: none; border: none; cursor: pointer;"
+                        type="button">&times;
+                </button>
+            </div>
+            <!-- Modal body with initial spinner -->
+            <div class="load-data-list" id="bassLineTabs">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Generating bass line tabs...</p>
+                </div>
+            </div>
+        </div>
+    </dialog>
 </div>
 
 <script>
@@ -408,12 +429,6 @@
             }
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
         function fetchTracks() {
             if (isLoading || !hasMore) return;
 
@@ -464,8 +479,9 @@
                     <span class="track-year" style="flex: 1;">${track.releasedYear}</span>
                     <span class="track-streams" style="flex: 1;">${formatNumber(track.streams)}</span>
                     <span class="track-spotify-lists" style="flex: 1;">${formatNumber(track.inSpotifyPlaylists)}</span>
-                    <span class="track-bass-line"
-                        style="flex: 1;">${track.bassLine ? 'Yes' : 'No'}</span>
+                    <span class="track-bass-line" style="flex: 1;">
+                        <button class="item-action-btn" onclick="openBassLineModal('${track.id}', '${escapeHtml(track.trackName)}', '${escapeHtml(track.artistName)}')">Bass Line</button>
+                    </span>
                 `;
                 tracksList.appendChild(trackElement);
             });
@@ -490,6 +506,12 @@
         fetchTracks();
     });
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     /**************************/
     // Load Data Modal Logic
     /**************************/
@@ -512,7 +534,6 @@
 
         loadDataModal.addEventListener('click', function (event) {
             const dialog = this;
-            const rect = dialog.getBoundingClientRect();
             if (event.target === dialog) {
                 dialog.close();
             }
@@ -615,6 +636,68 @@
                 loadDataList.innerHTML = `<div class="error-container"><p>Error: Failed to load file ${filename}: ${error.message}</p></div>`;
             });
     }
+
+    /**************************/
+    // Load Bass Line Modal Logic
+    /**************************/
+
+    function closeBassLineModal() {
+        document.getElementById("loadBassLineModal").close();
+    }
+
+    function parseMarkdown(content) {
+        return content
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*(.*?)\*/g, "<em>$1</em>")
+            .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
+            .replace(/`([^`]+)`/g, "<code>$1</code>")
+            .replace(/^---.*$/g, "<hr>")
+            .replace(/^### (.*)/gim, "<h3>$1</h3>")
+            .replace(/^## (.*)/g, "<h2>$1</h2>")
+            .replace(/^# (.*)/g, "<h1>$1</h1>")
+            .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace('\n', "<br>")
+            .replace(/^(.*)$/gim, '<p>$1</p>')
+            ;
+    }
+
+    function openBassLineModal(trackId, trackName, artistName) {
+        const loadBassLineModal = document.getElementById('loadBassLineModal');
+        const bassLineTabs = document.getElementById('bassLineTabs');
+        const bassLineTrackName = document.getElementById('bassLineTrackName');
+
+        bassLineTrackName.textContent = `${trackName} by ${artistName}`;
+        bassLineTabs.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Generating bass line tabs...</p>
+            </div>
+        `;
+
+        if (!loadBassLineModal.open) {
+            loadBassLineModal.showModal();
+        }
+
+        const url = `/tracks/api/${trackId}/bass-line`;
+
+        fetch(url, {method: 'POST'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                bassLineTabs.innerHTML = `${parseMarkdown(data.content)}`;
+            })
+            .catch(error => {
+                bassLineTabs.innerHTML = `<p class="error-message">Error generating bass line tabs: ${error.message}</p>
+            <p style="text-align: center"> <button class="item-action-btn" onclick="openBassLineModal('${trackId}', '${escapeHtml(trackName)}', '${escapeHtml(artistName)}')">Try again</button></p>`;
+            });
+    }
+
 </script>
 
 </body>
