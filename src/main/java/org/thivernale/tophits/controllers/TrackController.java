@@ -1,5 +1,6 @@
 package org.thivernale.tophits.controllers;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -10,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.thivernale.tophits.models.Track;
 import org.thivernale.tophits.services.BassLineService;
+import org.thivernale.tophits.services.ImageGenerationService;
 import org.thivernale.tophits.services.TrackService;
 
 import java.util.Collections;
@@ -22,6 +24,7 @@ import java.util.List;
 public class TrackController {
     private final TrackService trackService;
     private final BassLineService bassLineService;
+    private final ImageGenerationService imageGenerationService;
 
     // endpoint for page skeleton
     @GetMapping
@@ -119,6 +122,25 @@ public class TrackController {
 
             return ResponseEntity.internalServerError()
                 .body(new BassLineResponse(id, null, null, "There was an error generating bass line tabs. Please, try again later.", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/track-image")
+    public void generateTrackImage(@PathVariable Long id, HttpServletResponse response) {
+        log.info("Generating Track Image for track: {}", id);
+
+        try {
+            Track track = trackService.findById(id);
+            if (track != null) {
+                log.info("Generating Track Image for track: {} by {}", track.getTrackName(), track.getArtistName());
+                String imageUrl = imageGenerationService.generateImageForTrack(track);
+                response.sendRedirect(imageUrl);
+            } else {
+                ResponseEntity.notFound()
+                    .build();
+            }
+        } catch (Exception e) {
+            log.error("Error generating Track Image: {}", e.getMessage());
         }
     }
 
