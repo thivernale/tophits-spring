@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.thivernale.tophits.models.BassLineCache;
 import org.thivernale.tophits.models.Track;
 import org.thivernale.tophits.repositories.BassLineCacheRepository;
+import reactor.core.publisher.Flux;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -77,5 +78,14 @@ public class BassLineService {
              Format the response in a clear, readable way with proper sections.
             """);
         return builder.toString();
+    }
+
+    private Flux<String> streamGenerateBassLine(Track track) {
+        log.info("Streaming Bass Line generation for Track {} by {}", track.getTrackName(), track.getArtistName());
+
+        return chatClient.prompt()
+            .user(buildPrompt(track))
+            .stream()
+            .content();
     }
 }

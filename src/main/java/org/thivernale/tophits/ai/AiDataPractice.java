@@ -5,10 +5,12 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.redis.RedisVectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -18,6 +20,7 @@ import org.springframework.core.io.Resource;
 import redis.clients.jedis.JedisPooled;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Configuration
@@ -29,58 +32,101 @@ public class AiDataPractice {
     }
 
     @Bean
-    VectorStore vectorStore(JedisPooled jedisPooled, EmbeddingModel embeddingModel) {
-        RedisVectorStore vectorStore = RedisVectorStore.builder(jedisPooled, embeddingModel)
+    VectorStore vectorStore(JedisPooled jedisPooled, @Qualifier("openAiEmbeddingModel") EmbeddingModel embeddingModel) {
+        return RedisVectorStore.builder(jedisPooled, embeddingModel)
 //            .indexName("custom-index")     // Optional: defaults to "spring-ai-index"
 //            .prefix("custom-prefix")       // Optional: defaults to "embedding:"
             .vectorAlgorithm(RedisVectorStore.Algorithm.HSNW)
             .initializeSchema(true)
             .build();
-        return vectorStore;
     }
 
     @Bean
-    ApplicationRunner initVectorStore(VectorStore vectorStore, JedisPooled jedisPooled, ChatClient ai) {
+    ApplicationRunner initVectorStore(
+        VectorStore vectorStore,
+        @Qualifier("chatClientPractice") ChatClient ai
+    ) {
         return args -> {
-            setup(vectorStore, jedisPooled);
+            setup(vectorStore);
 
 //        ai.prompt("");
         };
     }
 
+    /**
+     * Create a ChatClient with a VectorStore-based QuestionAnswerAdvisor
+     * when only one ChatModel is available in the classpath
+     */
     @Bean
-    ChatClient chatClient(
+    ChatClient chatClientPractice(
         ChatClient.Builder builder,
         @Value("classpath:/system.md") Resource system,
-        VectorStore vectorStore) {
+        VectorStore vectorStore
+    ) {
         return builder.defaultSystem(system)
+            .defaultAdvisors(
+                QuestionAnswerAdvisor.builder(vectorStore)
+                    .build()
+            )
+            .build();
+    }
+
+    /**
+     * Create a ChatClient with a OpenAiChatModel and a VectorStore-based QuestionAnswerAdvisor
+     * when multiple ChatModels are available in the classpath
+     */
+    // @Bean
+    ChatClient openAiChatClient(OpenAiChatModel chatModel, VectorStore vectorStore) {
+        return ChatClient.create(chatModel)
+            .mutate()
             .defaultAdvisors(QuestionAnswerAdvisor.builder(vectorStore)
                 .build())
             .build();
     }
 
-    private void setup(VectorStore vectorStore, JedisPooled jedisPooled) {
+    private void setup(VectorStore vectorStore) {
         // clear all existing vectors in redis vector store
 //        jedisPooled.ftDropIndexDD("custom-index");
 
-        TokenTextSplitter splitter = new TokenTextSplitter();
+        // check if Redis vector store contain index
+        boolean indexExists = vectorStore.<JedisPooled>getNativeClient()
+            .map(client -> client.ftList()
+                .contains("spring-ai-index"))
+            .orElse(false);
 
+        if (!indexExists) {
+            log.debug("Redis vector store is empty, initializing with sample data...");
+            ingestSampleData(vectorStore);
+        } else {
+            log.debug("Redis vector store already initialized.");
+        }
+
+        List<Document> documents1 = vectorStore.similaritySearch(SearchRequest.builder()
+            .query("text1")
+            .similarityThreshold(0.9f)
+            .build());
+
+        log.info("Found {} documents:\n{}",
+            documents1.size(),
+            documents1.stream()
+                .map(d -> d.getText() + " (" + d.getScore() + ")")
+                .collect(Collectors.joining(",\n")));
+    }
+
+    private void ingestSampleData(VectorStore vectorStore) {
         List<Document> documents = List.of(Document.builder()
             .id("1")
             .text("text1")
             .metadata("category", "knowledge")
             .build(), Document.builder()
             .id("2")
-            .text("text2")
+            .text("something else")
             .metadata("category", "information")
             .build());
+
+        TokenTextSplitter splitter = new TokenTextSplitter();
         List<Document> split = splitter.split(documents);
-        vectorStore.accept(documents);
 
-        List<Document> documents1 = vectorStore.similaritySearch(SearchRequest.builder()
-            .query("text1")
-            .build());
-        log.info("Found {} documents", documents1.size());
+        vectorStore.accept(split);
     }
-
 }
