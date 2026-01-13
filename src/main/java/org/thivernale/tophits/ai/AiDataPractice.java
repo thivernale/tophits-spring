@@ -3,6 +3,7 @@ package org.thivernale.tophits.ai;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -20,6 +21,7 @@ import org.springframework.core.io.Resource;
 import redis.clients.jedis.JedisPooled;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,12 +29,10 @@ import java.util.stream.Collectors;
 @Profile("ai-data-practice")
 public class AiDataPractice {
     @Bean
-    JedisPooled jedisPooled() {
-        return new JedisPooled();
-    }
-
-    @Bean
-    VectorStore vectorStore(JedisPooled jedisPooled, @Qualifier("openAiEmbeddingModel") EmbeddingModel embeddingModel) {
+    VectorStore vectorStore(
+        JedisPooled jedisPooled,
+        @Qualifier("openAiEmbeddingModel") EmbeddingModel embeddingModel
+    ) {
         return RedisVectorStore.builder(jedisPooled, embeddingModel)
 //            .indexName("custom-index")     // Optional: defaults to "spring-ai-index"
 //            .prefix("custom-prefix")       // Optional: defaults to "embedding:"
@@ -46,10 +46,14 @@ public class AiDataPractice {
         VectorStore vectorStore,
         @Qualifier("chatClientPractice") ChatClient ai
     ) {
-        return args -> {
+        return _ -> {
             setup(vectorStore);
 
-//        ai.prompt("");
+            PromptTemplate template = PromptTemplate.builder()
+                .template("What is the text with id {id}?")
+                .build();
+            Map<String, Object> params = Map.of("id", "1");
+            ai.prompt(template.create(params));
         };
     }
 
@@ -80,7 +84,16 @@ public class AiDataPractice {
         return ChatClient.create(chatModel)
             .mutate()
             .defaultAdvisors(QuestionAnswerAdvisor.builder(vectorStore)
-                .build())
+                .searchRequest(
+                    SearchRequest.builder()
+                        .similarityThreshold(0.8f)
+                        .filterExpression(
+                            "category == 'knowledge'"
+                        )
+                        .build()
+                )
+                .build()
+            )
             .build();
     }
 
@@ -88,7 +101,7 @@ public class AiDataPractice {
         // clear all existing vectors in redis vector store
 //        jedisPooled.ftDropIndexDD("custom-index");
 
-        // check if Redis vector store contain index
+        // check if Redis vector store contains index
         boolean indexExists = vectorStore.<JedisPooled>getNativeClient()
             .map(client -> client.ftList()
                 .contains("spring-ai-index"))

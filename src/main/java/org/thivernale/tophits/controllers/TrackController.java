@@ -13,6 +13,7 @@ import org.thivernale.tophits.models.Track;
 import org.thivernale.tophits.services.BassLineService;
 import org.thivernale.tophits.services.ImageGenerationService;
 import org.thivernale.tophits.services.TrackService;
+import org.thivernale.tophits.services.TrackSimilaritySearchService;
 
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +26,7 @@ public class TrackController {
     private final TrackService trackService;
     private final BassLineService bassLineService;
     private final ImageGenerationService imageGenerationService;
+    private final TrackSimilaritySearchService trackSimilaritySearchService;
 
     // endpoint for page skeleton
     @GetMapping
@@ -125,7 +127,7 @@ public class TrackController {
         }
     }
 
-    @PostMapping("/{id}/track-image")
+    @PostMapping("/api/{id}/track-image")
     public void generateTrackImage(@PathVariable Long id, HttpServletResponse response) {
         log.info("Generating Track Image for track: {}", id);
 
@@ -141,6 +143,20 @@ public class TrackController {
             }
         } catch (Exception e) {
             log.error("Error generating Track Image: {}", e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/{id}/similar-tracks")
+    @ResponseBody
+    public ResponseEntity<String> getSimilarTracks(@PathVariable Long id) {
+        log.info("Fetching similar tracks for track ID: {}", id);
+
+        var similarTracks = trackSimilaritySearchService.similaritySearchTrack(id);
+        if (similarTracks != null && !similarTracks.isEmpty()) {
+            return ResponseEntity.ok(similarTracks);
+        } else {
+            return ResponseEntity.notFound()
+                .build();
         }
     }
 
