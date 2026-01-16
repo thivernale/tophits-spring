@@ -13,8 +13,7 @@ import org.springframework.stereotype.Service;
 import org.thivernale.tophits.models.Track;
 import redis.clients.jedis.JedisPooled;
 
-import java.util.Map;
-import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,7 +21,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TrackSimilaritySearchService {
     private final VectorStore vectorStore;
-    private final JedisPooled jedisPooled;
     private final JdbcClient db;
     private final TokenTextSplitter splitter = new TokenTextSplitter(true);
 
@@ -48,61 +46,54 @@ public class TrackSimilaritySearchService {
     }
 
     void ingestTracks() {
-        var tracks = db.sql("SELECT * FROM tracks WHERE id < 100")
+        var tracks = db.sql("SELECT * FROM tracks WHERE id < 500")
             .query(new DataClassRowMapper<>(Track.class))
             .list();
 
+        TrackVectorDocGenerator docGenerator = new TrackVectorDocGenerator();
+
         tracks.parallelStream()
-            .map(track -> Document.builder()
-                .id(String.valueOf(track.getId()))
-                .text(
-                    "'%s' by %s, released in %d with %d streams.".formatted(
-                        track.getTrackName(), track.getArtistName(), track.getReleasedYear(), track.getStreams())
-                )
-                .metadata(Map.of(
-                    "trackName", track.getTrackName(),
-                    "artistName", track.getArtistName(),
-                    "releasedYear", track.getReleasedYear(),
-                    "streams", track.getStreams()
-                ))
-                .build())
+            .map(getTrackDocumentFunction(docGenerator))
             .map(splitter::split)
             // vectorStore::accept shorthand
             .forEach(vectorStore);
     }
 
-    public String similaritySearchTrack(Long trackId) {
-        Optional<Track> trackOptional = db.sql("SELECT * FROM tracks WHERE id = :id")
-            .param("id", trackId)
-            .query(new DataClassRowMapper<>(Track.class))
-            .optional();
-        if (trackOptional.isEmpty()) {
-            log.warn("Track with id {} not found in database.", trackId);
-            return "";
-        }
+    private Function<Track, Document> getTrackDocumentFunction(TrackVectorDocGenerator docGenerator) {
+        return track -> Document.builder()
+            .id(String.valueOf(track.getId()))
+            .text(docGenerator.generateSemanticRepresentation(track))
+            .metadata(docGenerator.generateMetadata(track))
+            .build();
+    }
 
-        Track track = trackOptional.get();
-
+    public String similaritySearchTrack(String query) {
         var results = vectorStore.similaritySearch(
             SearchRequest.builder()
-                .query("'%s' by %s, released in %d with %d streams."
-                    .formatted(
-                        track
-                            .getTrackName(),
-                        track
-                            .getArtistName(),
-                        track
-                            .getReleasedYear(),
-                        track
-                            .getStreams()
-                    ))
+                .query(query)
                 .topK(5)
                 .build()
         );
 
-        return "Similar results to: '%s' by %s, released in %d with %d streams.%n%n".formatted(
-            track.getTrackName(), track.getArtistName(), track.getReleasedYear(), track.getStreams()) + results.stream()
-            .map(Document::getText)
+        return "Similar results to: '%s'.%n%n".formatted(query) + results.stream()
+            .map(document -> document.getText() + " (Score: " + evaluateSimilarityScore(document.getScore()) + ")")
             .collect(Collectors.joining(System.lineSeparator()));
+    }
+
+    private String evaluateSimilarityScore(Double score) {
+        switch (score) {
+            case null -> {
+                return "No Score";
+            }
+            case double s when s >= 0.85 -> {
+                return "Very High";
+            }
+            case double s when s >= 0.7 -> {
+                return "High (Fuzzy Match)";
+            }
+            default -> {
+                return "Low (Noise)";
+            }
+        }
     }
 }

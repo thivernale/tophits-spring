@@ -146,12 +146,12 @@ public class TrackController {
         }
     }
 
-    @PostMapping("/api/{id}/similar-tracks")
+    @PostMapping("/api/similar-tracks")
     @ResponseBody
-    public ResponseEntity<String> getSimilarTracks(@PathVariable Long id) {
-        log.info("Fetching similar tracks for track ID: {}", id);
+    public ResponseEntity<String> getSimilarTracks(@RequestBody String query) {
+        log.info("Fetching similar tracks for query: {}", query);
 
-        var similarTracks = trackSimilaritySearchService.similaritySearchTrack(id);
+        var similarTracks = trackSimilaritySearchService.similaritySearchTrack(query);
         if (similarTracks != null && !similarTracks.isEmpty()) {
             return ResponseEntity.ok(similarTracks);
         } else {
