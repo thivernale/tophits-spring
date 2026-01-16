@@ -45,8 +45,15 @@ public class TrackSimilaritySearchService {
         }
     }
 
+    @SuppressWarnings("unused")
+    private void clearVectorStore() {
+        vectorStore.<JedisPooled>getNativeClient()
+            .ifPresent(client -> client.ftDropIndexDD(indexName));
+        log.info("Cleared Redis vector store index: {}", indexName);
+    }
+
     void ingestTracks() {
-        var tracks = db.sql("SELECT * FROM tracks WHERE id < 500")
+        var tracks = db.sql("SELECT * FROM tracks WHERE id < 1000")
             .query(new DataClassRowMapper<>(Track.class))
             .list();
 
