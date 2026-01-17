@@ -1,0 +1,79 @@
+
+### Rate-limiting test with dynamic header values
+< {%
+    request.variables.set("aa", [{ id: 1 }, { id: 22 }, { id: 333 }, { id: 4444 }, { id: 55555 }]);
+%}
+
+GET http://localhost:8081/api/rate-limited
+X-Forwarded-For: 192.168.100.111
+X-Device-User-Agent: {{$.aa..id}}
+
+> {%
+    client.assert(response.status == (request.iteration() < 3 ? 200 : 429), `${request.iteration()} iteration: ${response.status}`);
+%}
+
+### Rate-limiting test
+GET http://localhost:8081/api/rate-limited
+
+### List available csv files
+GET http://localhost:8081/data/files
+Accept: application/json
+
+### Load empty CSV file - expect failure
+POST http://localhost:8081/data/load/empty.csv
+
+### Load invalid CSV file - expect failure
+POST http://localhost:8081/data/load/My%20Spotify%20Playlist%20Missing.csv
+
+### Create test data for a single track
+POST http://localhost:8081/data/test
+
+### Detect locale from Accept-Language header or lang query param
+GET http://localhost:8081/data/detect-locale?lang=de-DE
+#Accept-Language: bg-BG, bg;q=0.9, en-US;q=0.8, en;q=0.7
+
+### List tracks with sorting and pagination
+GET http://localhost:8081/tracks/api?sortField=streams&sortOrder=asc&size=20&page=0&search=&searchType=track
+
+### Get rate-limited expensive operation
+GET http://localhost:8081/api/rate-limited/non-cached?input=42
+
+### Generate bass line
+POST http://localhost:8081/tracks/api/61/bass-line
+
+### Generate track artwork
+POST localhost:8081/tracks/api/56/track-image
+
+### Search for similar tracks by text prompt
+POST localhost:8081/tracks/api/similar-tracks
+Content-Type: application/json
+
+"90s nostalgia"
+
+### Detect image content
+GET http://localhost:8081/api/detect-image
+
+### Ask LLM about datetime using tools
+GET http://localhost:8081/api/tools/datetime
+
+### ✅ Ask LLM about weather using tools
+GET http://localhost:8081/api/tools/weather?message=What will the weather be like tomorrow?
+#X-Forwarded-For: <external_ip_address>
+
+### ✅ Get external IP
+GET https://checkip.amazonaws.com
+
+### ✅ Get geographic coordinates from IP
+# {query} can be a single IPv4/IPv6 address or a domain name. If you don't supply a query the current IP address will be used.
+@query =
+< {%
+    request.variables.set('fields', encodeURIComponent('query,lat,lon,timezone'))
+%}
+
+GET http://ip-api.com/json/{{query}}?fields={{$.fields}}
+Accept: application/json
+
+### ✅ Get weather data by geographic coordinates
+https://api.open-meteo.com/v1/forecast?latitude=42.6826&longitude=23.3223&timezone=Europe%2FSofia&
+    daily=temperature_2m_min%2Ctemperature_2m_max%2Cweather_code
+Accept: application/json
