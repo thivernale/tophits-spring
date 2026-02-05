@@ -7,8 +7,6 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.DataClassRowMapper;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.thivernale.tophits.models.Track;
 import redis.clients.jedis.JedisPooled;
@@ -21,8 +19,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class TrackSimilaritySearchService {
     private final VectorStore vectorStore;
-    private final JdbcClient db;
     private final TokenTextSplitter splitter = new TokenTextSplitter(true);
+    private final TrackService trackService;
 
     @Value("${spring.ai.vectorstore.redis.index-name}")
     private String indexName;
@@ -53,9 +51,8 @@ public class TrackSimilaritySearchService {
     }
 
     void ingestTracks() {
-        var tracks = db.sql("SELECT * FROM tracks WHERE id < 1000")
-            .query(new DataClassRowMapper<>(Track.class))
-            .list();
+        var tracks = trackService.listTracks(0, 1000, "id", "asc")
+            .getContent();
 
         TrackVectorDocGenerator docGenerator = new TrackVectorDocGenerator();
 
