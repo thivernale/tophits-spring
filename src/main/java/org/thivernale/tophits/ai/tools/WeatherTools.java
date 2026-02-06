@@ -114,7 +114,7 @@ public class WeatherTools {
                 case 77 -> "Snow grains";
                 case 80, 81, 82 -> "Rain showers: Slight, moderate, and violent";
                 case 85, 86 -> "Snow showers: Slight and heavy";
-                default -> "Unknown weather code";
+                default -> "Unknown weather code " + code;
             };
         }
     }
