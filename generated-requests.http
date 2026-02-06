@@ -57,6 +57,7 @@ GET http://localhost:8081/api/detect-image
 GET http://localhost:8081/api/tools/datetime
 
 ### ✅ Ask LLM about weather using tools
+# @no-cookie-jar
 GET http://localhost:8081/api/tools/weather?message=What will the weather be like tomorrow?
 #X-Forwarded-For: <external_ip_address>
 
@@ -73,7 +74,15 @@ GET https://checkip.amazonaws.com
 GET http://ip-api.com/json/{{query}}?fields={{$.fields}}
 Accept: application/json
 
+> {%
+    // Store the latitude and longitude for later use in the weather API request
+    const data = response.body;
+    client.global.set('latitude', data.lat);
+    client.global.set('longitude', data.lon);
+    client.global.set('timezone', data.timezone);
+%}
+
 ### ✅ Get weather data by geographic coordinates
-https://api.open-meteo.com/v1/forecast?latitude=42.6826&longitude=23.3223&timezone=Europe%2FSofia&
+https://api.open-meteo.com/v1/forecast?latitude={{latitude}}&longitude={{longitude}}&timezone={{timezone}}&
     daily=temperature_2m_min%2Ctemperature_2m_max%2Cweather_code
 Accept: application/json
