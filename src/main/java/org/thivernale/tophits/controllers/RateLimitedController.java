@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.thivernale.tophits.models.Track;
 import org.thivernale.tophits.redis.RedisDataPractice;
 
 @RestController
@@ -29,5 +30,23 @@ public class RateLimitedController {
     public ResponseEntity<RedisDataPractice.Response> nonCachedOperation(
         @RequestParam(defaultValue = "42") double input) {
         return ResponseEntity.ok(expensiveService.nonCachedCalculation(input));
+    }
+
+    @GetMapping("/save-track")
+    public ResponseEntity<Track> saveTrack(
+        @RequestParam(defaultValue = "64") long input) {
+        return expensiveService.saveTrack(input)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound()
+                .build());
+    }
+
+    @GetMapping("/get-track")
+    public ResponseEntity<Track> getTrack(
+        @RequestParam(defaultValue = "64") long input) {
+        return expensiveService.getTrack(input)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound()
+                .build());
     }
 }

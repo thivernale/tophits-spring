@@ -13,24 +13,27 @@ import org.springframework.data.geo.*;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.ReactiveGeoOperations;
-import org.springframework.data.redis.core.ReactiveListOperations;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.domain.geo.GeoLocation;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
+import org.thivernale.tophits.models.Track;
 import org.thivernale.tophits.repositories.TrackRepository;
 import reactor.core.publisher.Flux;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Optional;
 
 @Configuration
 @EnableCaching
@@ -128,9 +131,18 @@ public class RedisDataPractice {
     public RedisTemplate<Object, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<Object, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
-        template.setDefaultSerializer(
-            new Jackson2JsonRedisSerializer<>(Response.class)
-        );
+
+        // keys
+        GenericToStringSerializer<Object> keySerializer = new GenericToStringSerializer<>(Object.class);
+        template.setKeySerializer(keySerializer);
+        template.setHashKeySerializer(keySerializer);
+
+        // values
+//        Jackson2JsonRedisSerializer<Response> jsonSerializer = new Jackson2JsonRedisSerializer<>(Response.class);
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
+        template.setValueSerializer(jsonSerializer);
+        template.setHashValueSerializer(jsonSerializer);
+
         return template;
     }
 
@@ -171,17 +183,31 @@ public class RedisDataPractice {
             return result;
         }
 
-        public void saveTrack(long trackId) {
-            trackRepository.findById(trackId)
-                .ifPresent(track -> {
-                    System.out.println("Track found: " + track.getTrackName());
-//                redisTemplate.opsForHash()
-//                    .put("tracks-hash", trackId, track);
-                    Object o = redisTemplate.opsForHash()
-                        .get("tracks-hash", trackId);
-                    log.info("From Redis: {}", o);
-                });
+        public Optional<Track> saveTrack(long trackId) {
+            return trackRepository.findById(trackId)
+                .map(track -> {
+                        track.setTrackName(track.getTrackName() + " (cached)");
+                        log.info("Track found: {}", track.getTrackName());
+
+                        HashOperations<Object, Long, Track> opsForHash = redisTemplate.opsForHash();
+                        opsForHash.put("tracks-hash", trackId, track);
+
+                        return track;
+                    }
+                );
         }
 
+        public Optional<Track> getTrack(long trackId) {
+            return trackRepository.findById(trackId)
+                .map(track -> {
+                    log.info("Track found: {}", track.getTrackName());
+
+                    HashOperations<Object, Long, Track> opsForHash = redisTemplate.opsForHash();
+                    Track redisTrack = opsForHash.get("tracks-hash", String.valueOf(trackId));
+                    log.info("From Redis: {}", redisTrack);
+
+                    return redisTrack;
+                });
+        }
     }
 }

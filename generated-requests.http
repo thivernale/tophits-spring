@@ -13,7 +13,10 @@ X-Device-User-Agent: {{$.aa..id}}
 %}
 
 ### Rate-limiting test
-GET http://localhost:8081/api/rate-limited
+GET http://localhost:8081/api/rate-limited/expensive?input=555
+
+### Get/save track to redis
+GET http://localhost:8081/api/rate-limited/get-track?input=64
 
 ### List available csv files
 GET http://localhost:8081/data/files
