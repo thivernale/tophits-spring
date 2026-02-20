@@ -77,9 +77,11 @@ public class RedisDataPractice {
     }
 
     @Bean
+    @ConditionalOnProperty("app.redis.data.enabled")
     ApplicationRunner expensiveResponse(ExpensiveService service) {
         return args -> {
-            final double input = 42;
+            final double input = Double.parseDouble(LocalTime.now()
+                .format(DateTimeFormatter.ofPattern("HHmmss")));
             StopWatch stopWatch = new StopWatch();
             time(service, stopWatch, input);
             time(service, stopWatch, input);
@@ -154,7 +156,7 @@ public class RedisDataPractice {
 
         private final TrackRepository trackRepository;
 
-        @Cacheable(key = "#input", cacheNames = "expensiveCalculation")
+        @Cacheable(key = "#input", cacheNames = "expensive-calculation-cache")
         @SneakyThrows
         public Response performExpensiveCalculation(double input) {
             Thread.sleep(5_000);
