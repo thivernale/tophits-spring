@@ -44,13 +44,13 @@ public class TrackSimilaritySearchService {
     }
 
     @SuppressWarnings("unused")
-    private void clearVectorStore() {
+    public void clearVectorStore() {
         vectorStore.<JedisPooled>getNativeClient()
             .ifPresent(client -> client.ftDropIndexDD(indexName));
         log.info("Cleared Redis vector store index: {}", indexName);
     }
 
-    void ingestTracks() {
+    private void ingestTracks() {
         var tracks = trackService.listTracks(0, 1000, "id", "asc")
             .getContent();
 

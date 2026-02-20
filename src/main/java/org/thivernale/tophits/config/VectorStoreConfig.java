@@ -33,6 +33,9 @@ class VectorStoreConfig {
     ApplicationRunner initVectorStore(
         TrackSimilaritySearchService trackSimilaritySearchService
     ) {
-        return _ -> trackSimilaritySearchService.setup();
+        return _ -> {
+//            trackSimilaritySearchService.clearVectorStore();
+            trackSimilaritySearchService.setup();
+        };
     }
 }
