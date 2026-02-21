@@ -34,6 +34,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 @Configuration
 @EnableCaching
@@ -184,30 +185,34 @@ public class RedisDataPractice {
         }
 
         public Optional<Track> saveTrack(long trackId) {
-            return trackRepository.findById(trackId)
-                .map(track -> {
-                        track.setTrackName(track.getTrackName() + " (cached)");
-                        log.info("Track found: {}", track.getTrackName());
+            UnaryOperator<Track> trackFunction = track -> {
+                track.setTrackName(track.getTrackName() + " (cached)");
 
-                        HashOperations<Object, Long, Track> opsForHash = redisTemplate.opsForHash();
-                        opsForHash.put("tracks-hash", trackId, track);
+                HashOperations<Object, Long, Track> opsForHash = redisTemplate.opsForHash();
+                opsForHash.put("tracks-hash", trackId, track);
 
-                        return track;
-                    }
-                );
+                return track;
+            };
+            return retrieveAndProcessTrack(trackId, trackFunction);
         }
 
         public Optional<Track> getTrack(long trackId) {
-            return trackRepository.findById(trackId)
-                .map(track -> {
-                    log.info("Track found: {}", track.getTrackName());
+            UnaryOperator<Track> trackFunction = track -> {
+                HashOperations<Object, Long, Track> opsForHash = redisTemplate.opsForHash();
+                Track redisTrack = opsForHash.get("tracks-hash", trackId);
+                log.info("From Redis: {}", redisTrack);
 
-                    HashOperations<Object, Long, Track> opsForHash = redisTemplate.opsForHash();
-                    Track redisTrack = opsForHash.get("tracks-hash", String.valueOf(trackId));
-                    log.info("From Redis: {}", redisTrack);
+                return redisTrack;
+            };
+            return retrieveAndProcessTrack(trackId, trackFunction);
+        }
 
-                    return redisTrack;
-                });
+        private Optional<Track> retrieveAndProcessTrack(long trackId, UnaryOperator<Track> mapper) {
+            Optional<Track> track = trackRepository.findById(trackId);
+
+            track.ifPresent(t -> log.info("Track found: {}", t.getTrackName()));
+
+            return track.map(mapper);
         }
     }
 }
